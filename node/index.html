@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+    
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>ArdPilot</title>
+
+        <link rel="apple-touch-icon" href="Arduino_logo_pantone.png">
+        <link href="nouislider.css" type="text/css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="index.css" />
+        <link rel="stylesheet" type="text/css" href="highcharts.css" />
+        
+        <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src='nouislider.js'></script>
+        <script src="wNumb.js"></script>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/highcharts-more.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/modules/export-data.js"></script>
+        <script src="https://code.highcharts.com/modules/annotations.js"></script>
+
+        <script type="text/javascript" src="util-functions.js"></script>
+        <script type="text/javascript" src="clear-default-text.js"></script>
+        
+        <script>
+            var VoltMeter;
+            var MemMeter;
+            var color;
+
+                
+            $( window ).load(function() {
+                                 
+                // build the voltage stuff
+                                 
+                VoltMeter = Highcharts.chart('ArdVoltMeter', {
+                    chart: {
+                        type: 'gauge',
+                        backgroundColor: '#DDEEFF',
+                        plotBackgroundColor: {
+                                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                                stops: [[0, '#DDEEFF'], [0.4, '#FFFFFF'], [1, '#DDEEFF'] ]
+                        },
+                        height: 120
+                    },
+                    title: { floating: false, verticalAlign: 'bottom', text: '<span style="font-size:10px">Voltage</span>' },
+                    navigation: {
+                        buttonOptions: { enabled: false }
+                    },
+                    credits: { enabled: false },
+                    pane: [{
+                        startAngle: -45,
+                        endAngle: 45,
+                           background: [{
+                                        backgroundColor: '#DDEEFF',
+                                        borderWidth: 0,
+                                        outerRadius: '109%'
+                                        }],
+                        center: ['50%', '160%'],
+                        size: 200
+                    }],
+                    yAxis: [{
+                        min: 0, max: 15,
+                        minorTickPosition: 'outside',
+                        tickPosition: 'outside',
+                        tickInterval: 5,
+                        tickWidth: 0,
+                        labels: {
+                            rotation: 'auto',
+                            distance: 15
+                        },
+                        plotBands: [{ from: 0, to: 5.5,
+                            color: '#F4FA58',
+                            innerRadius: '100%',
+                            outerRadius: '105%'
+                        }, { from: 5.5, to: 9,
+                            color: '#82FA58',
+                            innerRadius: '100%',
+                            outerRadius: '105%'
+                        },{ from: 9, to: 15,
+                            color: '#FA5858',
+                            innerRadius: '100%',
+                            outerRadius: '105%'
+                        }],
+                        pane: 0
+                    }],
+                    plotOptions: {
+                        gauge: {
+                            dataLabels: { enabled: false },
+                            dial: { radius: '100%'}
+                        }
+                    },
+                    series: [{
+                        name: 'Input Voltage',
+                        data: [0],
+                        yAxis: 0,
+                        tooltip: {
+                             valueSuffix: 'V'
+                        },
+                        id: 'vlt'
+                    }]
+                });
+                             
+                // build the Memory stuff -
+
+                MemMeter = Highcharts.chart('ArdMemMeter', {
+                    chart: {
+                        type: 'gauge',
+                        backgroundColor: '#DDEEFF',
+                        plotBackgroundColor: {
+                            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                            stops: [[0, '#DDEEFF'], [0.4, '#FFFFFF'], [1, '#DDEEFF'] ]
+                        },
+                        height: 120
+                        },
+                        title: { floating: false, verticalAlign: 'bottom', text: '<span style="font-size:10px">Memory Free</span>' },
+                        navigation: {
+                           buttonOptions: { enabled: false }
+                        },
+                        credits: { enabled: false },
+                        pane: [{
+                                                                 startAngle: -45,
+                                                                 endAngle: 45,
+                                                                 background: [{
+                                                                              backgroundColor: '#DDEEFF',
+                                                                              borderWidth: 0,
+                                                                              outerRadius: '109%'
+                                                                              }],
+                                                                 center: ['50%', '160%'],
+                                                                 size: 200
+                        }],
+                        yAxis: [{
+                                                                  min: 0, max: 2048,
+                                                                  minorTickPosition: 'outside',
+                                                                  tickPosition: 'outside',
+                                                                  tickInterval: 512,
+                                                                  tickWidth: 0,
+                                                                  labels: {
+                                                                  rotation: 'auto',
+                                                                  distance: 15
+                                                                  },
+                                                                  plotBands: [{ from: 0, to: 256,
+                                                                              color: '#FA5858',
+                                                                              innerRadius: '100%',
+                                                                              outerRadius: '105%'
+                                                                              }, { from: 256, to: 512,
+                                                                              color: '#F4FA58',
+                                                                              innerRadius: '100%',
+                                                                              outerRadius: '105%'
+                                                                              },{ from: 512, to: 2048,
+                                                                              color: '#82FA58',
+                                                                              innerRadius: '100%',
+                                                                              outerRadius: '105%'
+                                                                              }],
+                                                                  pane: 0
+                                                                  }],
+                                                          plotOptions: {
+                                                          gauge: {
+                                                          dataLabels: { enabled: false },
+                                                          dial: { radius: '100%'}
+                                                          }
+                                                          },
+                                                          series: [{
+                                                                   name: 'Memory used',
+                                                                   data: [0],
+                                                                   yAxis: 0,
+                                                                   tooltip: {
+                                                                   valueSuffix: 'B'
+                                                                   },
+                                                                   id: 'mem'
+                                                                   }]
+                                                          });
+            });
+                
+            $( document ).ready(function() {
+                // When the DOM is ready, but not yet fully displayed
+                var charth; // globally available
+                var chartv;
+                
+                                
+            //builds the compass
+
+            compas = Highcharts.chart('ArdCompass', {
+                    chart: {
+                        type: 'gauge',
+                        backgroundColor: '#DDEEFF'
+                    },
+                    title: { floating: true, text: '' },
+                    navigation: {
+                        buttonOptions: {
+                            enabled: false
+                        }
+                    },
+                    credits: { enabled: false },
+                    pane: {
+                        startAngle: 0,
+                        endAngle: 360,
+                        background: [{
+                            backgroundColor: {
+                                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                                stops: [[0, '#FFF'],[1, '#333']]
+                            },
+                            borderWidth: 0,
+                            outerRadius: '109%'
+                        }, {
+                            backgroundColor: {
+                                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                                stops: [[0, '#333'],[1, '#FFF']]
+                        },
+                        borderWidth: 1,
+                        outerRadius: '107%'
+                        }, {},
+                        { backgroundColor: '#DDD', borderWidth: 0, outerRadius: '105%', innerRadius: '103%'  }]
+                    },
+                    // the value axis
+                    yAxis: {
+                            min: 0, max: 360,
+                            minorTickInterval: 9,
+                            minorTickWidth: 1,
+                            minorTickLength: 10,
+                            minorTickPosition: 'inside',
+                            minorTickColor: '#666',
+                                                 
+                            tickInterval: 45,
+                            tickWidth: 2,
+                            tickPosition: 'inside',
+                            tickLength: 10,
+                            gridLineWidth: 2,
+                            tickColor: '#666',
+                            labels: { step: 2, rotation: 'auto' },
+                            title: {text: 'N'},
+                            plotBands: [{
+                                from: 0,
+                                to: 360,
+                                color: '#CECEF6' // green
+                            }]
+                    },
+                    series: [{
+                            name: 'Cap',
+                            data: [0],
+                            tooltip: {
+                             valueSuffix: '°'
+                            },
+                            id: 'cmp'
+                    }]
+                });
+                                
+                // build the Servo control widgets
+                                    
+                var options = {
+                                    start: 90,
+                                    range: {min: 0, max: 180},
+                                    step: 1,
+                                    tooltips: true,
+                                    format: wNumb({ decimals: 0  }),
+                                    pips: {
+                                    mode: 'values',
+                                    values: [0, 45, 90, 135, 180],
+                                    density: 2
+                                    }
+                                };
+                                    
+                Slider1 = noUiSlider.create (document.getElementById('SliderSrv1'), options);
+                Slider2 = noUiSlider.create (document.getElementById('SliderSrv2'), options);
+                Slider1.set(0);
+                   
+                                
+                // build the socket stuff
+                // note : in Javascript a variable not declared has a global scope
+                                
+                socket = io.connect('http://192.168.1.3:8080');
+
+                                
+                socket.on('message', function(message) {
+                          if (message.length > 1) {       // parfois il reçoit juste un saut de ligne : pourquoi ?
+                                            $('#TextBox').append(message);
+                                        }
+                                        if($('#TextBox').length)
+                                        $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
+                                        })
+                                                     
+                socket.on('pongT', function(message) {
+                                        document.getElementById("Ping").style.background='LightGreen';
+                                        })
+                socket.on('pongF', function(message) {
+                                        document.getElementById("Ping").style.background='LightCoral';
+                                        })
+                                
+//                socket.on('wrefT', function(message) {
+//                                        document.getElementById("wifiref").style.background='LightGreen';
+//                                        })
+//                socket.on('wrefF', function(message) {
+//                                        document.getElementById("wifiref").style.background='LightCoral';
+//                                        })
+                
+//                socket.on('locT', function(message) {
+//                                        document.getElementById("locate").style.background='LightGreen';
+//                                        })
+//                socket.on('locF', function(message) {
+//                                        document.getElementById("locate").style.background='LightCoral';
+//                                        })
+                                
+                socket.on('scptT', function(message) {
+                                          document.getElementById("RunScript").style.background='LightGreen';
+                                          })
+                socket.on('scptF', function(message) {
+                                          document.getElementById("RunScript").style.background='LightCoral';
+                                          })
+                                
+                socket.on('TOPWT', function(message) {
+                                          document.getElementById("TopWifi").style.background='LightGreen';
+                                          })
+                socket.on('TOPWF', function(message) {
+                                          document.getElementById("TopWifi").style.background='LightCoral';
+                                          })
+                                
+                socket.on('axy', function(message) {
+                                    var series = compas.get('cmp');
+                                    var point = series.points[0];
+                          
+                                    point.update(parseInt(message));
+                                    series.show ();
+                                        })
+                    
+                socket.on('volt', function(message) {
+                                    var series = VoltMeter.get('vlt');
+                                    var point = series.points[0];
+                          
+                                    point.update(parseFloat(message));
+                                    series.show ();
+                                        })
+                                
+                socket.on('mem', function(message) {
+                                    var series = MemMeter.get('mem');
+                                    var point = series.points[0];
+                          
+                                    point.update(parseInt(message));
+                                    series.show ();
+                                        })
+                                
+                socket.on('sr1', function(message) {
+                                          Slider1.set (parseInt(message));
+                                          })
+                socket.on('sr2', function(message) {
+                                          Slider2.set (parseInt(message));
+                                          })
+                                
+                socket.on('LogFileOK', function(message) {
+                                        document.getElementById("TextBox").style.background='#E0F8E6';
+                                        $('#TextBox').append('Saving logs to ' + message);
+                                        if($('#TextBox').length)
+                                            $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
+                                        })
+                                
+                socket.on('eng', function(message) {
+                             
+                                        if (message.charAt(1) == 'T') {
+                                            color='LightGreen';
+                                        } else {
+                                            color='LightCoral';
+                                        }
+                              
+                                        switch(message.charAt(0)) {
+                                        case 'S':
+                                            document.getElementById("Sturn").style.background=color;
+                                        break;
+                                        case 'T':
+                                            document.getElementById("Turn").style.background=color;
+                                        break;
+                                        case 'L':
+                                            document.getElementById("Lturn").style.background=color;
+                                        break;
+                                        case 'A':
+                                        document.getElementById("RunAvt").style.background=color;
+                                        break;
+                                        case 'C':
+                                        document.getElementById("RunAvtCap").style.background=color;
+                                        break;
+                                        case '>':
+                                        document.getElementById("RunSuivDroite").style.background=color;
+                                        break;
+                                        case '<':
+                                        document.getElementById("RunSuivGauche").style.background=color;
+                                        break;
+                                        }
+                          })
+                          
+                socket.on('color', function(message) {
+                      var l = message.length -1;
+                      var bouton = message.toString().substring(1,l);
+                      
+                      if (message.charAt(0) == 'T') {
+                        color='LightGreen';
+                      } else {
+                        color='LightCoral';
+                      }
+                    
+                      document.getElementById(bouton).style.background=color;
+                })
+
+                Slider1.on('end', function( values, handle ) {
+                                        socket.emit('servo1', values[handle] );
+                                        });
+                Slider2.on('end', function( values, handle ) {
+                                        socket.emit('servo2', values[handle] );
+                                        });
+
+                           
+
+                $('#Config').click(function () {
+                                        socket.emit('config', 'config');
+                                        })
+                                    
+
+
+                $('#ScanHorizon').click(function () {
+                                        var series = charth.get('ligneh');
+                                        
+                                        socket.emit('scan', 'h');
+                                        
+                                        series.remove ();
+                                        charth.addSeries ({
+                                                visible: false, showInLegend: false,
+                                                id: 'ligneh'
+                                        })})
+                $('#ScanVertical').click(function () {
+                                        var series = chartv.get('lignev');
+                                         
+                                        socket.emit('scan', 'v');
+                                         
+                                        series.remove ();
+                                        chartv.addSeries ({
+                                                visible: false, showInLegend: false,
+                                                id: 'lignev'
+                                                })
+                                        })
+                
+             // creation des dessins
+                                
+                charth = Highcharts.chart('charth', {
+                        chart: { type: 'scatter', zoomType: 'xy', animation: false, backgroundColor: '#DDEEFF',
+                            events: {
+                                click: function (event) {
+                                    
+                                    this.addAnnotation ({
+                                                xValue: event.xAxis[0].value,
+                                                yValue: event.yAxis[0].value,
+                                                title: {
+                                                    text: 'x: ' + Highcharts.numberFormat(event.xAxis[0].value, 0) +
+                                                        ', y: ' + Highcharts.numberFormat(event.yAxis[0].value, 0)
+                                                    }
+                                    })
+                                          
+                                    var annt = this.annotations.allItems[this.annotations.allItems.length -1];
+                                    setTimeout(function () {
+                                                     annt.destroy();
+                                            }, 2000);
+                                }
+                            }
+                        },
+                                          
+                        title: { text: 'Horizon' },
+                        
+                        xAxis: {
+                            startOnTick: true, endOnTick: true, min: -200, max: 200, tickInterval: 50, showEmpty: true
+                        },
+                        yAxis: {
+                            startOnTick: true, endOnTick: true, min: 0, max: 200, tickInterval: 50, showEmpty: true,
+                            title: { text: '(cm)' }
+                        },
+                                          
+                        credits: { enabled: false },
+                        plotOptions: {
+                            scatter: {
+                                marker: {
+                                    radius: 2,
+                                    states: {
+                                        hover: {
+                                          enabled: true, lineColor: 'rgb(100,100,100)'
+                                        }
+                                    }
+                                },
+                                states: {
+                                    hover: {
+                                        marker: {
+                                          enabled: false
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    headerFormat: '<b>{series.name}</b><br>',
+                                    pointFormat: '{point.x} cm, {point.y} cm'
+                                }
+                            }
+                        },
+                        series: [{
+                            data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation sinon ne s'affiche pas
+                            visible: false, showInLegend: false,
+                            id: 'ligneh'
+                                          
+                        }],
+                                
+                });
+                     
+                chartv = Highcharts.chart('chartv', {
+                        chart: {
+                            type: 'scatter', zoomType: 'xy', animation: false, backgroundColor: '#DDEEFF',
+                        },
+                        title: { text: 'Vertical' },
+                        xAxis: {
+                            startOnTick: true, endOnTick: true, min: 0, max: 200, tickInterval: 50, showEmpty: true,
+                            title: {
+                                text: '(cm)',
+                            }
+                        },
+                        yAxis: {
+                            startOnTick: true, endOnTick: true, min: -200, max: 200, tickInterval: 50, showEmpty: true,
+                        },
+                        credits: { enabled: false },
+                        plotOptions: {
+                                scatter: {
+                                    marker: {
+                                          radius: 2,
+                                          states: {
+                                            hover: {
+                                                enabled: true, lineColor: 'rgb(100,100,100)'
+                                            }
+                                          }
+                                    },
+                                    states: {
+                                          hover: {
+                                          marker: {
+                                            enabled: false
+                                          }
+                                          }
+                                    },
+                                    tooltip: {
+                                          headerFormat: '<b>{series.name}</b><br>',
+                                          pointFormat: '{point.x} cm, {point.y} cm'
+                                          }
+                                    }
+                        },
+                        series: [{
+                                data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation sinon ne s'affiche pas
+                                visible: false, showInLegend: false,
+                                id: 'lignev'
+                        }],
+                                          
+                });
+
+                                
+                plan = Highcharts.chart('plan', {
+                            chart: {type: 'scatter', zoomType: 'xy', animation: false,
+                                events: {
+                                    click: function (event) {
+                                        socket.emit('goto',  Highcharts.numberFormat(event.xAxis[0].value, 0) + ' ' +
+                                                    Highcharts.numberFormat(event.yAxis[0].value, 0));
+                                    }
+                                }
+                            },
+                            credits: {enabled: false},
+                            title: {text: 'Appartement'},
+                            xAxis: { min: -1, max: 93, visible: false },
+                            yAxis: { min: -1, max: 193, visible: false, reversed: true },
+                            plotOptions: {
+                                        scatter: {
+                                                tooltip: { pointFormat: '{point.x} dm, {point.y} dm' }
+                                            }
+                            },
+                            
+                            series: [{
+                                    data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation sinon ne s'affiche pas
+                                    visible: true, showInLegend: true,
+                                     id: 'murs', color: 'Black', name: 'Mur',
+                                     marker: {
+                                        enabled: true,
+                                        symbol: 'square',
+                                        radius: 2
+                                     }
+                            }],
+                });
+  
+                socket.on('ploth', function(message) {
+                          var plotArray = message.split (' ');
+                          var series = charth.get('ligneh');
+                          var plotx;
+                          var ploty;
+                          
+                          for (i = 0; i < 30; i++)
+                          {
+                                plotx = parseInt(plotArray[2*i + 1]);
+                                ploty = parseInt(plotArray[2*i + 2]);
+                                series.addPoint ([plotx, ploty]);
+                          }
+                          series.show ();
+                });
+                
+                socket.on('plotv', function(message) {
+                            var plotArray = message.split (' ');
+                            var series = chartv.get('lignev');
+                            var plotx;
+                            var ploty;
+                          
+                            for (i = 0; i < 30; i++)
+                            {
+                                plotx = parseInt(plotArray[2*i + 1]);
+                                ploty = parseInt(plotArray[2*i + 2]);
+                                series.addPoint ([plotx, ploty]);
+                            }
+                          
+                            series.show ();
+                });
+                                
+                socket.on('drawmurs', function(message) {
+                          
+                            var dataset = message.split(' ');
+                            var series = plan.get('murs');
+                          
+                            for (var i=0; i < dataset.length; i++)
+                            {
+                                cell = dataset[i].split(",").map(Number);
+                                series.addPoint (cell, false);
+                            }
+                          
+                          plan.redraw();
+                });
+                
+                socket.on('drawrefs', function(message) {
+//cf ci-dessus si besoin
+                });
+                                
+ 
+                $("#LoadScript").change(function() {
+                        document.getElementById('ScriptName').value = this.files[0].name;
+                });
+                                
+                $("#LogFileName").keyup(function (e) {
+                    if (e.keyCode == 13) {
+                        socket.emit('LogFile', this.value);
+                    }
+                });
+            })
+            
+            function do_cmd (commande) {
+                socket.emit('cmd', commande);
+            }
+        
+            function do_cmd_color (obj, commande, couleur) {
+                obj.style.background = couleur;
+                socket.emit('cmd', commande);
+            }
+        
+            function do_cmd_code (obj, commande, code) {
+                socket.emit('cmd', commande + code);
+            }
+        
+            function do_cmd_colval (obj, commande, valTxt, couleur) {
+                obj.style.background = couleur;
+                socket.emit('cmd', commande + document.getElementById(valTxt).value);
+            }
+        
+            function loadit(element)
+            {
+                var tabs=document.getElementById('onglets').getElementsByTagName("a");
+                var objets;
+                
+                objets = document.getElementsByClassName("InOnglet1");
+                for (var j=0; j < objets.length; j++)
+                {
+                    objets[j].style.display = "none";
+                }
+                objets = document.getElementsByClassName("InOnglet2");
+                for (var j=0; j < objets.length; j++)
+                {
+                    objets[j].style.display = "none";
+                }
+                objets = document.getElementsByClassName("InOnglet3");
+                for (var j=0; j < objets.length; j++)
+                {
+                    objets[j].style.display = "none";
+                }
+                
+                for (var i=0; i < tabs.length; i++)
+                {
+                    if(tabs[i].href == element.href)
+                    {
+                        tabs[i].className="active";
+                        tabs[i].style.borderBottom="1px solid #fff";
+                        tabs[i].style.backgroundColor="#fff";
+                        objets = document.getElementsByClassName(tabs[i].rel);
+                        for (var j=0; j < objets.length; j++)
+                        {
+                            objets[j].style.display = "block";
+                        }
+                    }
+                    else
+                    {
+                        tabs[i].className="";
+                        tabs[i].style.borderBottom="1px solid #9EA0A1";
+                        tabs[i].style.backgroundColor="#F4F9FD";
+                       
+                    }
+                }
+            }
+        
+            </script>
+</head>
+ 
+ 
+ 
+<body>
+    
+    <table id="TopTable">
+        <thead>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td> <input type="button" value="Environnement" id="Envt"
+                    onClick="do_cmd('ENVT')"/> </td>
+                <td> <input type="button" value="Ping" id="Ping"
+                    onClick="do_cmd_color(this, 'PING','SandyBrown')" title='Check robot reachability'/> </td>
+                <td> <input type="button" value="Test" id="TBDBD"
+                    onClick="do_cmd('Test')" title="perform test action"/> </td>
+                <td> <input type="button" value="Led On/Off" id="Led"
+                    onClick="do_cmd('LED')" title="Toggles LED"/> </td>
+                <td><div id="Servo1txt"><center>Servo1 </center></div> </td>
+                <td><div id="Servo2txt"><center>Servo2 </center></div> </td>
+                <td> <input type="button" value="Load Config" id="Config" /> </td>
+                <td> <input type="button" value="Shutdown" id="Shtdn" style="background-color:#FC3020"
+                    onClick="do_cmd_color(this,'SHTDN','SandyBrown')" title="shutdown robot and clean processes"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Santé" id="Sante" onClick="do_cmd('SANTE')" title="Updates compas, battery and memory indicators"/> </td>
+                <td> <input type=text id="ScriptName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Load Script" onclick="document.getElementById('LoadScript').click();"/>
+                    <input id="LoadScript" type="file" name="name" style="display: none;" accept="scpt"/></td>
+                <td> <input type="button" value="Run Script" id="RunScript"
+                    onclick="do_cmd_colval (this,'RSCPT','ScriptName','SandyBrown')" title="Run specified shell script"/> </td>
+                <td> <input type="button" value="Stop Script" id="StopScpt"
+                    onclick="do_cmd_colval (this,'SSCPT','ScriptName','SandyBrown')" title="Stop currently running script"/> </td>
+                <td> <div id="SliderSrv1"> </div> </td>
+                <td> <div id="SliderSrv2"> </div> </td>
+                <td> <input type=text id="LogFileName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Save logs to..." class="cleardefault"//> </td>
+                <td>  </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <table id="TxtTable">
+        <thead>
+        </thead>
+        
+        <tbody>
+            <tr>
+                <td colspan="3" rowspan="3"> <center>
+                    <textarea readonly id="TextBox" cols="80" rows="18" style="border-width:1px; border-style:groove; background-color:#F8E0E0">
+                     </textarea></center>
+                </td>
+                <td rowspan="3"> <center> <div id="ArdCompass"
+                    onClick="do_cmd('CMP')" title="Click to update" style="width: 200px; height: 200px; margin: 0 auto"></div> </center> </td>
+                <td> <center> <input type="button" value="Front Dist" id="DistG"
+                    onClick="do_cmd('DST')" title="Measure distance from turret Lidar"/> </center> </td>
+                <td> <input type=text id="wifireftxt" rows="1" style="font-style: italic; color:#a0a0a0"
+                    title="-1 or matrix # to update" value="-1" class="cleardefault"//> </td>
+                <td> <center> <input type="button" value="WIFI Ref" id="wifiref"
+                    onClick="do_cmd_colval(this,'WREF','wifireftxt','SandyBrown')" title="Record top 10 SSIDs in each 4 directions"/> </center></td>
+            </tr>
+            <tr>
+                <td> <center> <input type="button" value="Top WIFI"
+                    onClick="do_cmd_color(this, 'TOPW','SandyBrown')" title='Find 10 strongest SSIDs' id="TopWifi" /> </td>
+                <td colspan=2> <center> <input type="button" value="Locate"
+                    onClick="do_cmd_color(this, 'LOCT','SandyBrown')" title='Locate among WIFI matrices' id="locate" /> </td>
+            </tr>
+            <tr>
+                <td> <div id="ArdVoltMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
+                <td colspan=2> <div id="ArdMemMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
+            </tr>
+        </tbody>
+    </table>
+    
+<div id="menu">
+  <ul id="onglets">
+        <li class="active"><a href="#1" rel="InOnglet1" onClick="loadit(this)">Scan</a></li>
+        <li><a href="#2" rel="InOnglet2" onClick="loadit(this)">Plan </a></li>
+        <li><a href="#3" rel="InOnglet3" onClick="loadit(this)">TBD</a></li>
+  </ul>
+</div>
+
+<div id="commandes1" >
+
+    <table id="TurnCmdTable" class="InOnglet1 InOnglet2">
+        <thead>
+        </thead>
+    
+        <tbody>
+            <tr>
+                <td> <input type="button" value="Spot Turn" id="Sturn"
+                    onclick="do_cmd_colval (this,'ENGS','SturnTxt','SandyBrown')" title="Spot turn"/> </td>
+                <td> <input type=text id="SturnTxt" size="8" rows="1" maxlength="8"
+                    style="font-style:italic; color:#a0a0a0; font-weight:bold"  value="cap" class="cleardefault"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Turn" id="Turn"
+                    onclick="do_cmd_colval (this,'ENGT','TurnTxt','SandyBrown')" title="Simple turn"/> </td>
+                <td> <input type=text id="TurnTxt" size="4" rows="1" maxlength="4"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="cap" class="cleardefault"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Large Turn" id="Lturn"
+                    onclick="do_cmd_colval (this,'ENGL','LturnTxt','SandyBrown')" title="Large turn"/> </td>
+                <td> <input type=text id="LturnTxt" size="4" rows="1" maxlength="4"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="cap" class="cleardefault"/> </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div id="GrandPathCmdTable" class="InOnglet1 InOnglet2">
+
+                
+        <table id="TestCmdTable" class="InOnglet1 InOnglet2">
+            <thead>
+            </thead>
+    
+            <tbody>
+                <tr>
+                    <td> <input type="button" value="Test roue D" id="RoueD"
+                        onclick="do_cmd_colval (this,'ENGD','RoueDTxt','White')" title="test right wheel"/> </td>
+                    <td> <input type=text id="RoueDTxt" size="4" rows="1" maxlength="4"
+                        style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse" class="cleardefault"/> </td>
+                </tr>
+                <tr>
+                    <td> <input type="button" value="Test roue G" id="RoueG"
+                        onclick="do_cmd_colval (this,'ENGG','RoueGTxt','White')" title="test left wheel"/> </td>
+                    <td> <input type=text id="RoueGTxt" size="4" rows="1" maxlength="4"
+                        style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse" class="cleardefault"/> </td>
+                </tr>
+            </tbody>
+        </table>
+        
+
+        <table id="PathCmdTable" class="InOnglet1 InOnglet2">
+            <thead>
+            </thead>
+    
+            <tbody>
+                <tr>
+                    <td> <input type="button" value="Path Left " id="PathL" /> </td>
+                    <td> <input type="button" value="Path Right" id="PathR" /> </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <table id="RunCmdTable" class="InOnglet1 InOnglet2">
+        <thead>
+        </thead>
+    
+        <tbody>
+            <tr>
+                <td> <input type="button" value="Avant" id="RunAvt"
+                    onclick="do_cmd_colval (this,'ENGA','RunAvtTxt','SandyBrown')" title="Go forward"/> </td>
+                <td> <input type=text id="RunAvtTxt" size="16" rows="1" maxlength="16"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse (cm)" class="cleardefault"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Avant sur Cap" id="RunAvtCap"
+                    onclick="do_cmd_colval (this,'ENGC','RunAvtCapTxt','SandyBrown')" title="Go forward and follow compass"/> </td>
+                <td> <input type=text id="RunAvtCapTxt" size="16" rows="1" maxlength="16"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse (cm)" class="cleardefault"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Suivre Droite" id="RunSuivDroite"
+                    onclick="do_cmd_colval (this,'ENG>','RunSuivDroiteTxt','SandyBrown')" title="Go forward and follow right wall"/> </td>
+                <td> <input type=text id="RunSuivDroiteTxt" size="16" rows="1" maxlength="16"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse (cm)" class="cleardefault"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="SuivreGauche" id="RunSuivGauche"
+                    onclick="do_cmd_colval (this,'ENG<','RunSuivGaucheTxt','SandyBrown')" title="Go forward and follow left wall"/> </td>
+                <td> <input type=text id="RunSuivGaucheTxt" size="16" rows="1" maxlength="16"
+                    style="font-style: italic; color:#a0a0a0; font-weight:bold"  value="vitesse (cm)" class="cleardefault"/> </td>
+            </tr>
+        </tbody>
+    </table>
+
+<div id="chartv" style="width:30%; height:500px;" class="InOnglet1"> </div>
+
+<div id="plan" style="width:25%; height:500px; display:none" class="InOnglet2" > </div>
+
+<input type="button" value="Horizon" id="ScanHorizon"  class="InOnglet1"/>
+<input type="button" value="Vertical" id="ScanVertical"  class="InOnglet1"/>
+
+
+<div id="charth" style="width:60%; height:300px;" class="InOnglet1">  </div>
+
+</div>
+
+
+</body>
+</html>

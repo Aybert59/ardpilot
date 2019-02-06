@@ -1,0 +1,122 @@
+# matrices de WIFI référence
+#
+# chaque matrice contient une mesure de référence des 10 hotspots les plus visibles
+# mesurées dans chacune des 4 directions cardinales 
+#
+# pour la zone dans le plan cf le plan excel et le format dans read_config.c
+#
+# Maximum 64 matrices
+#
+###################################################################################
+
+
+
+#
+Matrix 0
+Zone C0
+Name ChambreZoneBureau
+Releves 3
+ssid 0 0 40 Livebox-d9b9
+ssid 0 1 50 FreeWifi
+ssid 0 2 51 FreeWifi_secure
+ssid 0 3 50 
+ssid 0 4 52 TP-LINK_9692C8
+ssid 0 5 77 Livebox-55D3
+ssid 0 6 81 orange
+ssid 0 7 73 DIRECT-GuC48x
+ssid 0 8 85 DIRECT-GuC48x
+ssid 0 9 74 Sanglier
+ssid 1 0 42 Livebox-d9b9
+ssid 1 1 45 FreeWifi
+ssid 1 2 45 FreeWifi_secure
+ssid 1 3 46 
+ssid 1 4 53 TP-LINK_9692C8
+ssid 1 5 60 Sanglier
+ssid 1 6 66 Livebox-94C0
+ssid 1 7 69 DIRECT-GuC48x
+ssid 1 8 69 DIRECT-GuC48x
+ssid 1 9 77 orange
+ssid 2 0 40 Livebox-d9b9
+ssid 2 1 44 FreeWifi
+ssid 2 2 43 FreeWifi_secure
+ssid 2 3 45 
+ssid 2 4 50 TP-LINK_9692C8
+ssid 2 5 68 Livebox-55D3
+ssid 2 6 64 Sanglier
+ssid 2 7 67 orange
+ssid 2 8 87 DIRECT-GuC48x
+ssid 2 9 99 
+ssid 3 0 39 Livebox-d9b9
+ssid 3 1 46 FreeWifi_secure
+ssid 3 2 47 FreeWifi
+ssid 3 3 50 
+ssid 3 4 53 TP-LINK_9692C8
+ssid 3 5 75 DIRECT-GuC48x
+ssid 3 6 82 DIRECT-GuC48x
+ssid 3 7 83 Sanglier
+ssid 3 8 71 
+ssid 3 9 80 Livebox-55D3
+
+# chambre zone placard
+Matrix 1
+Zone C3
+Name ChambreZonePlacard
+Releves 2
+ssid 0 0 46 Livebox-d9b9ssid 0 1 44 TP-LINK_9692C8ssid 0 2 45 FreeWifissid 0 3 45 FreeWifi_securessid 0 4 45 ssid 0 5 59 DIRECT-GuC48x Series
+ssid 0 6 59 DIRECT-GuC48x Series
+ssid 0 7 66 Sanglierssid 0 8 67 Livebox-55D3ssid 0 9 64 Livebox-94C0ssid 1 0 41 TP-LINK_9692C8ssid 1 1 44 Livebox-d9b9ssid 1 2 48 FreeWifissid 1 3 48 FreeWifi_securessid 1 4 49 ssid 1 5 56 DIRECT-GuC48x Series
+ssid 1 6 56 DIRECT-GuC48x Series
+ssid 1 7 66 Sanglierssid 1 8 59 Livebox-94C0ssid 1 9 70 Livebox-935Essid 2 0 42 FreeWifi_securessid 2 1 42 FreeWifissid 2 2 43 Livebox-d9b9ssid 2 3 43 ssid 2 4 48 TP-LINK_9692C8ssid 2 5 65 Sanglierssid 2 6 63 DIRECT-GuC48x Series
+ssid 2 7 63 DIRECT-GuC48x Series
+ssid 2 8 64 Livebox-94C0ssid 2 9 66 nguyenWIFI_EXT
+ssid 3 0 41 TP-LINK_9692C8ssid 3 1 44 FreeWifissid 3 2 44 FreeWifi_securessid 3 3 42 ssid 3 4 45 Livebox-d9b9ssid 3 5 71 orangessid 3 6 82 Livebox-94C0
+ssid 3 7 99 
+ssid 3 8 99 
+ssid 3 9 99 
+
+#
+Matrix 2
+Zone 41
+Name CouloirZoneArmoireDanse
+Releves 1
+ssid 0 0 41 Livebox-d9b9
+ssid 0 1 44 FreeWifi_secure
+ssid 0 2 45 FreeWifi
+ssid 0 3 45 
+ssid 0 4 49 TP-LINK_9692C8
+ssid 0 5 64 DIRECT-GuC48x
+ssid 0 6 64 DIRECT-GuC48x
+ssid 0 7 64 orange
+ssid 0 8 66 Livebox-55D3
+ssid 0 9 71 
+ssid 1 0 37 Livebox-d9b9
+ssid 1 1 45 FreeWifi
+ssid 1 2 45 
+ssid 1 3 45 FreeWifi_secure
+ssid 1 4 57 TP-LINK_9692C8
+ssid 1 5 60 AndroidLF
+ssid 1 6 62 Sanglier
+ssid 1 7 66 DIRECT-GuC48x
+ssid 1 8 66 DIRECT-GuC48x
+ssid 1 9 99 
+ssid 2 0 38 Livebox-d9b9
+ssid 2 1 44 
+ssid 2 2 44 FreeWifi
+ssid 2 3 44 FreeWifi_secure
+ssid 2 4 47 TP-LINK_9692C8
+ssid 2 5 70 Sanglier
+ssid 2 6 71 AndroidLF
+ssid 2 7 71 StargateBB
+ssid 2 8 74 Livebox-94C0
+ssid 2 9 99 
+ssid 3 0 40 Livebox-d9b9
+ssid 3 1 45 FreeWifi
+ssid 3 2 45 FreeWifi_secure
+ssid 3 3 45 
+ssid 3 4 59 AndroidLF
+ssid 3 5 67 TP-LINK_9692C8
+ssid 3 6 69 Sanglier
+ssid 3 7 70 Livebox-55D3
+ssid 3 8 71 Livebox-94C0
+ssid 3 9 71 orange
+
