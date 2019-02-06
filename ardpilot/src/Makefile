@@ -5,7 +5,6 @@ CC=gcc
 CFLAGS=-c -g
 LDFLAGS=-lm
 
-
 SRC=$(HOME)/$(PROJET)/src
 OBJ=$(HOME)/$(PROJET)/obj
 BIN=$(HOME)/$(PROJET)/bin
