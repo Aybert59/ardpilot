@@ -201,37 +201,31 @@ Starting activity ...
 Unknown message 72 from Arduino (8 bytes : ELLO*a)
 Connected to TP-LINK_9692C8
 IP - 192.168.1.62
-PNGT
 MEM 2048
-VOLT 5.68
+VOLT 5.72
 AXY 0
 Reloading config parameters
 20
-5
-5
+55
 0
 1.0
-AXY 31
-PNGF
-PNGT
-COLORTLed
-COLORFLed
-COLORTLed
-COLORFLed
-SR1 80
-PNGF
-PNGT
-SR1 102
-Distance Gauche : 364
-PNGF
-PNGT
-SR1 179
-SR1 179
-Distance Gauche : 166
-PNGF
-PNGT
+AXY 127
 MEM 520
-VOLT 6.42
+VOLT 6.32
+PNGF
+PNGT
+PNGF
+PNGT
+PNGF
+PNGT
+PNGF
+PNGT
+PNGF
+PNGT
+PNGF
+PNGT
+PNGF
+PNGT
 Shutdown requested
 
 Cleaning up
