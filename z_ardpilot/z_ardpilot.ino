@@ -104,7 +104,7 @@ float FacteurAlignement = 1.0;
 char listAP[5][20];
 
 const char *ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
-const char *pass[] = { "mntifwrd5", "Mntifwrd5"};
+#include "passwords.h" // just contains : const char *pass[] = { "password1", "password2"};
 byte CurrentAP;
 
 
@@ -381,4 +381,3 @@ void loop() {
     
   } // if connected
 }    
-
