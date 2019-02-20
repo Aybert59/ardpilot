@@ -21,7 +21,7 @@ int dif_angle(int x, int y)
   int arg;
 
   arg = (y-x) % 360;
-  if (arg < 0 )  arg  = arg + 360;
+  if (arg < -180 )  arg  = arg + 360;
   if (arg > 180) arg  = arg - 360;
 
   return (-arg);
@@ -48,7 +48,7 @@ static int previousDelta = 999;
 
  
         if ((dl >= DistanceMin) // no obstacle
-          && ((delta * previousDelta) > 0)) // objective in the same direction as previously
+          && ((delta * previousDelta) > 0)) // target in the same direction as previously
         { 
             if (delta < 0) {
               ServoLeft.writeMicroseconds (1500 + SpeedInt);
@@ -226,6 +226,3 @@ wifi_write ();
 
     }
 }
-
-
-

@@ -205,7 +205,7 @@ void interpret_ard (char *buffer, int debug_mode)
         }
         
         sequence = buffer[1];   // attention pas forcément implémenté sur chaque commande
-        // pour le moment C_LAP, C_SCANH, C_SCANV, C_MEM, C_CMP, C_PRI
+        // pour le moment C_SCANH, C_SCANV, C_MEM, C_CMP, C_PRI
         switch (cmd) {
                 
             case C_PING :
@@ -306,17 +306,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 control_message(MSG_INFO, message);
                 break;
                 
-            case C_LAP :
-                sprintf (message, "Sequence %c :", sequence);
-                strcat (message, &(buffer[2]));
-                sscanf (&(buffer[2]), "%d %d %d %d %d", &(RSSI[0]), &(RSSI[1]), &(RSSI[2]), &(RSSI[3]), &(RSSI[4]));
-                
-                if (debug_mode == 1)
-                    printf ("    ARD-->Server LAP %s\n", &(buffer[2]));
-                
-                control_message(MSG_INFO, message);
-                break;
-                
+
             case C_TOPWIFI :
                 
                 if (debug_mode == 1)

@@ -120,3 +120,51 @@ ssid 3 7 70 Livebox-55D3
 ssid 3 8 71 Livebox-94C0
 ssid 3 9 71 orange
 
+
+
+# 
+Matrix 3
+Zone 90
+Name SalleDeBainsP
+Releves 1
+ssid 0 0 49 Livebox-94C0
+ssid 0 1 49 TP-LINK_9692C8
+ssid 0 2 50 Livebox-d9b9
+ssid 0 3 50 FreeWifi
+ssid 0 4 50 FreeWifi_secure
+ssid 0 5 51 
+ssid 0 6 58 DIRECT-GuC48x Series
+ssid 0 7 58 DIRECT-GuC48x Series
+ssid 0 8 71 Livebox-55D3
+ssid 0 9 99 
+ssid 1 0 48 Livebox-d9b9
+ssid 1 1 48 TP-LINK_9692C8
+ssid 1 2 51 FreeWifi_secure
+ssid 1 3 51 FreeWifi
+ssid 1 4 51 
+ssid 1 5 55 Livebox-94C0
+ssid 1 6 57 DIRECT-GuC48x Series
+ssid 1 7 57 DIRECT-GuC48x Series
+ssid 1 8 66 Livebox-55D3
+ssid 1 9 66 orange
+ssid 2 0 41 TP-LINK_9692C8
+ssid 2 1 48 Livebox-94C0
+ssid 2 2 49 Livebox-d9b9
+ssid 2 3 54 FreeWifi_secure
+ssid 2 4 54 FreeWifi
+ssid 2 5 54 
+ssid 2 6 64 DIRECT-GuC48x Series
+ssid 2 7 64 DIRECT-GuC48x Series
+ssid 2 8 67 orange
+ssid 2 9 68 Livebox-55D3
+ssid 3 0 44 FreeWifi
+ssid 3 1 44 FreeWifi_secure
+ssid 3 2 44 
+ssid 3 3 45 TP-LINK_9692C8
+ssid 3 4 46 Livebox-d9b9
+ssid 3 5 57 DIRECT-GuC48x Series
+ssid 3 6 57 DIRECT-GuC48x Series
+ssid 3 7 58 Livebox-94C0
+ssid 3 8 70 Sanglier
+ssid 3 9 74 Livebox-55D3
+

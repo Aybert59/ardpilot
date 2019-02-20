@@ -66,7 +66,6 @@ FILE *open_wifi_matrix_file (int MatRef);
 void close_wifi_matrix_file (FILE *fd);
 
 // from commandes.c
-int force_oriente_robot (int numTries, int cap_souhaite);
-int oriente_robot (int cap_souhaite);
+int oriente_robot (int cap_souhaite, int tolerance);
 
 #endif /* ardpilot_h */

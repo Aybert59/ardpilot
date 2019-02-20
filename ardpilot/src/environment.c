@@ -15,17 +15,7 @@ int TopWIFICount = 0;
 float distance_matrix (struct wifiref *CurrentWifi, struct wifiref *RefWifi);
 extern unsigned char Sequence[];
 
-void check_wifi_environment (char sequence)
-{
-    extern int ardfd;
-    char message[4];
-    
-    message[0] = C_LAP;
-    message[1] = sequence;
-    message[2] = '\0';
-    write_ard (ardfd, message);
-    
-}
+
 
 void get_top_wifi (char sequence)
 {
@@ -48,8 +38,6 @@ int analyze_environment ()
     // récupérer vitesse des moteurs
     
     // récupérer WIFI
- 
-    check_wifi_environment ('*');
     
     // récupérer orientation boussole
     
@@ -147,7 +135,7 @@ printf ("Matrix to update %d\n", MatRef);
 
     for (i=0; i<4; i++)
     {
-        codeRet = force_oriente_robot (4, i*90);
+        codeRet = oriente_robot (i*90, -1);
         if (codeRet == 0)
         {
             printf("Problème d'orientation\n");
@@ -308,7 +296,7 @@ int locate_myself ()
     {
         printf ("Orientation %d\n",i*90);
         
-        codeRet = force_oriente_robot (4, i*90);
+        codeRet = oriente_robot (i*90, -1);
         if (codeRet == 0)
         {
             printf("Problème d'orientation\n");

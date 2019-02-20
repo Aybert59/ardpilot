@@ -10,17 +10,7 @@
 
 long measure_distance_us (int n) {
   long d;
-  //int trig, echo;
-  
-  //trig = TRIG_U;
-  //echo = ECHO_U;
- 
-  // digitalWrite (trig, HIGH);
-  // delayMicroseconds (10);
-  // digitalWrite (trig, LOW);
-    
-  //d = pulseIn (echo, HIGH);  // !! retourne 0 si distance > 150 mètres (1 seconde)
-  //d = SonarAV.ping_median(PngNum);
+
   d = SonarAV.ping_median(n);
     
   return d;
@@ -439,5 +429,3 @@ void batteryLevel()
 
   wifi_write ();
 }
-
-

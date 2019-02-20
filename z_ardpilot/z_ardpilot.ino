@@ -94,14 +94,12 @@ unsigned long Decompte = 0xffffffff;
 
 // gestion des parametres moteurs
 
-const long DIST_SEUIL = 1500; 
 int DistanceMin = 5;  // Nb de cm en deça duquel on interrompt une primitive
 int AjustementMoteur = 0;
 float FacteurAlignement = 1.0;
 
 // parametres de config
 
-char listAP[5][20];
 
 const char *ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
 #include "passwords.h" // just contains : const char *pass[] = { "password1", "password2"};
@@ -144,16 +142,18 @@ int i;
 }
 void send_robot_status () {
     
+  delay (400);
   obuffer[0] = C_PING;
   obuffer[1] = '\0';
   wifi_write();
 
-  delay (200);
+  delay (400);
   memoryFree(0x00);
-  delay (200);
+  delay (400);
   batteryLevel();
-  delay (200);
+  delay (400);
   get_angle ('*');
+  delay (400);
 }
 
 void reload_config_parameters() {
@@ -240,15 +240,6 @@ void terminate_setup () {
   PrimValue = 0;
   OldPrimValue = 0;
 
-  // initialisation des parametres
-
-  listAP[0][0] = '-';
-  listAP[1][0] = '-';
-  listAP[2][0] = '-';
-  listAP[3][0] = '-';
-  listAP[4][0] = '-';
-
-
 }
 
 
@@ -312,13 +303,13 @@ void loop() {
       switch (Primitive) {
         
       case P_SPOT_TURN :
-        primitive_turn (-15, 15, dl, (char *)"Sturn");
+        primitive_turn (-10, 10, dl, (char *)"Sturn");
       break;
       case P_TURN :
-        primitive_turn (0, 20, dl, (char *)"Turn");
+        primitive_turn (0, 15, dl, (char *)"Turn");
       break;
       case P_LARGE_TURN :
-        primitive_turn (15, 30, dl, (char *)"Lturn");
+        primitive_turn (10, 20, dl, (char *)"Lturn");
       break;
       
       case P_TEST_LEFT :

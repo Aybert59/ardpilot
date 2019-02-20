@@ -53,6 +53,7 @@ void set_servo (char servo, char sequence, int angle) {
     obuffer[1] = sequence;
     itoa (b1, &(obuffer[2]), 10);
     wifi_write();
+    delay(400);
 }
 
 void manage_command (int len) {
@@ -109,21 +110,6 @@ void manage_command (int len) {
       case F_INIT :
         reload_config_parameters();
       break;
- //     case F_AP1 :
- //       strcpy(listAP[0], &(ibuffer[2]));
- //     break;
- //     case F_AP2 :
- //       strcpy(listAP[1], &(ibuffer[2]));
- //     break;
- //     case F_AP3 :
- //       strcpy(listAP[2], &(ibuffer[2]));
- //     break;
- //     case F_AP4 :
- //       strcpy(listAP[3], &(ibuffer[2]));
- //     break;
- //     case F_AP5 :
- //       strcpy(listAP[4], &(ibuffer[2]));
- //     break;
       case F_SRV1 :
         ServoDelay = atoi(&(ibuffer[2])); 
 strcpy (&(obuffer[1]), &(ibuffer[2]));
@@ -157,11 +143,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
     
     break;
     
-  case C_LAP:
-     
-    wifi_getAccessPoint (sequence);
-    break;
-
+ 
   case C_TOPWIFI:
      
     wifi_getTopAP (sequence);
@@ -247,9 +229,9 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
 
         servo1.write (posRepos1);
         if (b1 < 0)
-          servo2.write (15);
+          servo2.write (0);
         else
-          servo2.write (165);
+          servo2.write (180);
         delay (200); // wait a bit for the servo to be in position, otherwise distance measure can be false. Is 200 enough ?
       break;
       
@@ -309,4 +291,3 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
     break;
   }
 }
-

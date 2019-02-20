@@ -20,7 +20,7 @@
 
 // controls
 #define C_PING        0x02
-#define C_LAP         0x03
+
 #define C_LED         0x04
 #define C_SR1         0x05
 #define C_SR2         0x06

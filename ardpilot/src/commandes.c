@@ -112,18 +112,6 @@ printf ("got it %c!\n", buffer[3]);
     return (buffer[3]);  // renvoie T ou F mais seulement dans le cas C_COLOR
 }
 
-void bloc_get_wifi_environment ()
-{
-    unsigned char sequence;
-    int i;
-
-    sequence = Sequence[C_LAP] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-        sequence++;
-
-    check_wifi_environment (sequence);
-    boucle_attente (C_TOPWIFI, sequence, 0);
-}
 
 int bloc_get_top_wifi ()
 {
@@ -282,7 +270,7 @@ int dif_angle(int x, int y)
 }
 
 
-int oriente_robot (int cap_souhaite)
+int oriente_robot (int cap_souhaite, int tolerance)
 {
     int cap, cap_demande;
     char result;
@@ -295,37 +283,42 @@ printf ("=== oriente_robot vers %d\n", cap_demande);
     
     cap = bloc_get_compas ();
 printf ("=== cap courant %d\n", cap);
-    while (abs (dif_angle (cap, cap_demande)) > 5)
+    
+    if (tolerance == -1)
     {
-        printf("demande %d\n",cap_demande);
-        result = bloc_primitive_spot_turn (cap_demande);
-        printf("success %c\n",result);
-        if (result == 'F')
-            nb_blocs++;
-        if (nb_blocs > 2)
+        result = 'F';
+        while (result == 'F')
         {
-            code_retour = 0;
-            break;
+            printf("demande %d\n",cap_demande);
+            result = bloc_primitive_spot_turn (cap_demande);
+            printf("success %c\n",result);
+            if (result == 'F')
+                nb_blocs++;
+            if (nb_blocs > 2)
+            {
+                code_retour = 0;
+                break;
+            }
+            cap = bloc_get_compas ();
         }
-        cap = bloc_get_compas ();
+    } else
+    {
+        while (abs (dif_angle (cap, cap_demande)) > tolerance)
+        {
+            printf("demande %d\n",cap_demande);
+            result = bloc_primitive_spot_turn (cap_demande);
+            printf("success %c\n",result);
+            if (result == 'F')
+                nb_blocs++;
+            if (nb_blocs > 2)
+            {
+                code_retour = 0;
+                break;
+            }
+            cap = bloc_get_compas ();
+        }
     }
     return (code_retour);
-}
-
-int force_oriente_robot (int numTries, int cap_souhaite)
-{
-    int forceOrientation = 0;
-    int codeRet = 0;
-
-    while (codeRet == 0)
-    {
-        forceOrientation++;
-        codeRet = oriente_robot (cap_souhaite);
-        if (forceOrientation >= numTries)
-            break;
-    }
-    
-    return (codeRet);
 }
 
 int run_command_script(char *ScriptName)
