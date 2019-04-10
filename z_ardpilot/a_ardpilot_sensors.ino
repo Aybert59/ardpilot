@@ -5,6 +5,7 @@
 //////////////////////////////////////////
 
 #include <MemoryFree.h>
+#include <HMC5883L.h>
 
 // Ultrasonic sensors reading
 
@@ -16,7 +17,36 @@ long measure_distance_us (int n) {
   return d;
 }
 
-long measure_distance_lidar (int n) {
+int measure_distance_lidar_i2c () {
+  int val = -1;
+  
+  Wire.beginTransmission((int)Lidar_address); // transmit to LIDAR-Lite
+  Wire.write((int)0x00); // sets register pointer to  (0x00)  
+  Wire.write((int)0x04); // sets register pointer to  (0x00)  
+  Wire.endTransmission(); // stop transmitting
+
+  delay(20); // Wait 20ms for transmit
+
+  Wire.beginTransmission((int)Lidar_address); // transmit to LIDAR-Lite
+  Wire.write((int)0x8f); // sets register pointer to (0x8f)
+  Wire.endTransmission(); // stop transmitting
+
+  delay(20); // Wait 20ms for transmit
+  
+  Wire.requestFrom((int)Lidar_address, 2); // request 2 bytes from LIDAR-Lite
+
+  if(2 <= Wire.available()) // if two bytes were received
+  {
+    val = Wire.read(); // receive high byte (overwrites previous reading)
+    val = val << 8; // shift high byte to be high 8 bits
+    val |= Wire.read(); // receive low byte as lower 8 bits
+  }
+  
+  return val;
+  
+}
+
+long measure_distance_lidar_pwm (int n) {
   long d, s, moy, ecart = 0, somme = 0;
   int i, j;
   long val[7];
@@ -60,7 +90,7 @@ long measure_distance_lidar (int n) {
 long measure_distance (int n) {
   long li,us, d;
   
-  li = measure_distance_lidar (n);
+  li = (long) measure_distance_lidar_i2c ();
   us = measure_distance_us (n);
 
   // à affiner
@@ -199,7 +229,14 @@ return;
 int get_compas () {
   int x,y,z; //triple axis data
   double angle;
-  
+
+  Wire.beginTransmission(Compass_address); //open communication with HMC5883 compass
+  Wire.write(0x02); //select mode register
+  Wire.write(0x00); //continuous measurement mode
+  Wire.endTransmission();
+
+  delay(20);
+
   //Tell the HMC5883 where to begin reading data
   Wire.beginTransmission(Compass_address);
   Wire.write(0x03); //select register 3, X MSB register

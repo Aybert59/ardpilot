@@ -1,5 +1,6 @@
 
 
+
 //////////////////////////////////////////
 //
 // main
@@ -101,7 +102,8 @@ float FacteurAlignement = 1.0;
 // parametres de config
 
 
-const char *ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
+//const char *ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
+const char *ssid[] = {"Livebox-94C0"};
 #include "passwords.h" // just contains : const char *pass[] = { "password1", "password2"};
 byte CurrentAP;
 
@@ -178,25 +180,21 @@ void setup() {
   pinMode (ECHO_L, INPUT);
   pinMode (ECHO_U, INPUT);
   digitalWrite (TRIG_U, LOW);
-  digitalWrite (ENABLE_L, HIGH);
+  digitalWrite (ENABLE_L, LOW); // low : use the i2c
 
   UART.begin(9600); // start the serial connection to the shield
 
   // for debug only
   SERIALBEGIN(UARTSPEED);  // start the Arduino serial monitor window connection
-  DBGPRTLN(""); // start a new line
 
   delay(3000); // wait 3 second to allow the serial/uart object to start
 
   wifly.reset(); // reset the shield 
 
-  DBGPRT("Going to join Access Point... ");
-
-  CurrentAP = wifi_FindBestAP (2); // passer le nb d'entrées dans le tableau des ssid
+  CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
   while (!wifly.join(ssid[CurrentAP], pass[CurrentAP],WIFLY_AUTH_WPA2_PSK)) {
       delay (100);
   }
-  DBGPRTLN("Done.");
   
 }
 
@@ -206,10 +204,10 @@ void terminate_setup () {
   //Put the HMC5883 IC (compass) into the correct operating mode
   Wire.begin();
   
-  Wire.beginTransmission(Compass_address); //open communication with HMC5883 compass
-  Wire.write(0x02); //select mode register
-  Wire.write(0x00); //continuous measurement mode
-  Wire.endTransmission();
+//  Wire.beginTransmission(Compass_address); //open communication with HMC5883 compass
+//  Wire.write(0x02); //select mode register
+//  Wire.write(0x00); //continuous measurement mode
+//  Wire.endTransmission();
 
 //  delay(20);
 
@@ -297,7 +295,7 @@ void loop() {
     //////revoir tout ce qui suit
     if (Primitive != P_NULL)
     {
-      dl = measure_distance (3);
+      dl = measure_distance (1);
 
       
       switch (Primitive) {

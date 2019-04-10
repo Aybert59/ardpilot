@@ -365,6 +365,7 @@ int locate_myself ()
     // step 3 display results
     
     printf ("*** Closest matrix is %d ***\n\n",rang);
+    display_room_from_matrix (WifiMatrix[rang].zone);
     
     return codeRet; // 1 = ok, 0 = pb de positionnement
 }

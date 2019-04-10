@@ -78,6 +78,7 @@ void read_compas_correction()
     strcat (filename, "/");
     strcat (filename, COMPAS_FILE);
     fd = fopen (filename, "r");
+    i=0;
     if (fd != NULL)
     {
         while ((read = getline(&line, &len, fd)) > 0)
@@ -87,12 +88,14 @@ void read_compas_correction()
             sscanf (line, "%d;%d", &angleArd, &angleReel);
             if ((angleArd >= 0) && (angleArd < 360) && (angleReel >= 0) && (angleReel < 360))
             {
+                i++;
                 compas_correction[angleArd] = angleReel;
                 cap_correction[angleReel] = angleArd;
             }
         }
         free (line);
         fclose (fd);
+        printf ("Read %d lines from Compas adjustment file\n",i);
     } else {
         printf ("Compas adjustment file unreadable !\n");
     }
@@ -364,7 +367,7 @@ void read_wifi_matrixes()
             } else if (!strncmp (line, "Zone", 4) )
             {
                 if (rang >= 0)
-                    sscanf (line, "%*s %c%c", &(WifiMatrix[rang].zone[0]), &(WifiMatrix[rang].zone[1]));
+                    sscanf (line, "%*s %x", &(WifiMatrix[rang].zone));
             } else if (!strncmp (line, "Name", 4) )
             {
                 if (rang >= 0)
@@ -447,7 +450,7 @@ void write_wifi_matrixes()
         {
             fprintf (fd, "#\n");
             fprintf (fd, "Matrix %d\n", lines);
-            fprintf (fd, "Zone %c%c\n", WifiMatrix[lines].zone[0], WifiMatrix[lines].zone[1]);
+            fprintf (fd, "Zone %2X\n", WifiMatrix[lines].zone);
             fprintf (fd, "Name %s\n", WifiMatrix[lines].name);
             fprintf (fd, "Releves %d\n", WifiMatrix[lines].Releves);
             for (i=0; i<4; i++)

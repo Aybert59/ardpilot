@@ -104,6 +104,11 @@ void consolidate_points (char *buffer, char segment, char orientation, double X[
 
 }
 
+void clear_plan ()
+{
+    control_message(MSG_INFO, "CLEARPLAN");
+}
+
 void draw_plan ()
 {
     char message[1024];
@@ -147,4 +152,30 @@ void draw_plan ()
 
     control_message(MSG_INFO, message);
 */
+}
+
+void display_room_from_matrix (unsigned int zone)
+{
+    char message[1024];
+    char temp[10];
+    int i,j;
+    
+    clear_plan();
+    draw_plan ();
+    
+    printf ("drawing zone %2X\n",zone);
+    for (i=0;i<193;i++)
+    {
+        strcpy (message,"DRAWCOLOR Aquamarine  ");
+        for (j=0;j<93;j++)
+        {
+            if (Appartement[i * 93 + j].piece == zone)
+            {
+                sprintf (temp, "%d,%d ", j,i);
+                strcat (message, temp);
+            }
+        }
+        control_message(MSG_INFO, message);
+        
+    }
 }

@@ -23,6 +23,8 @@ int cmdfd = 0, ardfd = 0, scriptfd = 0, scriptWritefd =0;
 FILE *logfd = 0;
 int ArdBlocLevel = 0;
 
+int DebugMode = 0;
+
 pid_t process;
 
 double pointsX[180];
@@ -165,7 +167,7 @@ int read_ard (int fd)
     // si rien n'est attendu en particulier, alors on traite le buffer.
     // sinon, on ne fait rien, on attend ce qui est attendu
     {
-        interpret_ard (buffer, 0);
+        interpret_ard (buffer, DebugMode);
     }
  
     return n;
@@ -455,6 +457,21 @@ int exec_cmd (char *buffer)
             else
                 strcat (message, "T");
             strcat (message, "Led");
+            control_message(MSG_INFO, message);
+        }
+        else if (!strncmp(buffer, "DEBUG", 5))
+        {
+            if (DebugMode == 0)
+                DebugMode = 1;
+            else
+                DebugMode = 0;
+            
+            sprintf (message, "COLOR");
+            if (DebugMode == 0)
+                strcat (message, "F");
+            else
+                strcat (message, "T");
+            strcat (message, "DbgMode");
             control_message(MSG_INFO, message);
         }
         else if (!strncmp(buffer, "RSCPT", 5))

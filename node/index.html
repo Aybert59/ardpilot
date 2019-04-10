@@ -577,10 +577,61 @@
                                         enabled: true,
                                         symbol: 'square',
                                         radius: 2
+                                     }},
+                                     {
+                                     data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
+                                     visible: false, showInLegend: true,
+                                     id: 'ZonePresence', name: 'Zone Presence',
+                                     marker: {
+                                        enabled: true,
+                                        symbol: 'circle',
+                                        radius: 1
                                      }
+                                     
                             }],
                 });
   
+                socket.on('drawmurs', function(message) {
+                                          
+                    var dataset = message.split(' ');
+                    var series = plan.get('murs');
+                                          
+                    for (var i=0; i < dataset.length; i++)
+                    {
+                        cell = dataset[i].split(",").map(Number);
+                        series.addPoint (cell, false);
+                    }
+                                          
+                    plan.redraw();
+                });
+                                
+                socket.on('ClearPlan', function(message) {
+                    var series = plan.get('ZonePresence');
+                    series.setData ([{x: 0, y:0}], true);
+                });
+                    
+                socket.on('drawcolor', function(message) {
+                    
+                    var msg = message.trim();
+                    var delim = msg.indexOf(' ');
+                    var couleur = msg.slice (0, delim);
+                    var donnees = msg.slice (delim+1);
+                          
+                    var dataset = donnees.split(' ');
+                    var series = plan.get('ZonePresence');
+                    
+                    series.setOptions ({color: couleur});
+                          
+                    for (var i=0; i < dataset.length; i++)
+                    {
+                        cell = dataset[i].split(",").map(Number);
+                        series.addPoint (cell, false);
+                    }
+                   
+                    series.setVisible (true);
+                    plan.redraw();
+                });
+                                
                 socket.on('ploth', function(message) {
                           var plotArray = message.split (' ');
                           var series = charth.get('ligneh');
@@ -612,23 +663,9 @@
                             series.show ();
                 });
                                 
-                socket.on('drawmurs', function(message) {
-                          
-                            var dataset = message.split(' ');
-                            var series = plan.get('murs');
-                          
-                            for (var i=0; i < dataset.length; i++)
-                            {
-                                cell = dataset[i].split(",").map(Number);
-                                series.addPoint (cell, false);
-                            }
-                          
-                          plan.redraw();
-                });
+
                 
-                socket.on('drawrefs', function(message) {
-//cf ci-dessus si besoin
-                });
+
                                 
  
                 $("#LoadScript").change(function() {
@@ -742,7 +779,8 @@
                 <td> <div id="SliderSrv1"> </div> </td>
                 <td> <div id="SliderSrv2"> </div> </td>
                 <td> <input type=text id="LogFileName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Save logs to..." class="cleardefault"//> </td>
-                <td>  </td>
+                <td>  <input type="button" value="Debug Mode" id="DbgMode"
+                    onClick="do_cmd('DEBUG')" title="Toggles debug mode" style="background-color:SandyBrown"/> </td>
             </tr>
         </tbody>
     </table>

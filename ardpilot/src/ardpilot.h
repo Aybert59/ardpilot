@@ -26,7 +26,7 @@ struct _ssid
 
 struct wifiref
 {
-    char zone[2];
+    unsigned int zone;
     char name[32];
     struct _ssid ssid[4][10]; // la matrice elle-même
     int i; // ordonnée dans le plan de l'appart (unused)

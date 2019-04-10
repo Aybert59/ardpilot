@@ -199,11 +199,11 @@ Now waiting for Arduino to connect
 Arduino connection accepted
 Starting activity ... 
 Unknown message 72 from Arduino (8 bytes : ELLO*a)
-Connected to TP-LINK_9692C8
+Connected to Livebox-94C0
 IP - 192.168.1.62
 PNGT
 MEM 2048
-VOLT 5.56
+VOLT 5.72
 AXY 0
 Reloading config parameters
 20
@@ -211,58 +211,28 @@ Reloading config parameters
 5
 0
 1.0
-AXY 15
+AXY 39
 PNGF
 PNGT
-MEM 644
-VOLT 6.28
-VOLT 6.27
-48 TP-LINK_9692C8
-50 Livebox-d9b9
-54 DIRECT-GuC48x Series
-54 DIRECT-GuC48x Series
-55 Livebox-94C0
-55 FreeWifi
-56 FreeWifi_secure
-56 
-67 Sanglier
-71 Livebox-55D3
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-TOPWT
-
-Bug #1 : may return empty result : run "TopWifi" once first
-
-Bug #2 : if blocked if the middle of the process click on the compass to release
-
-
+AXY 39
+AXY 39
+AXY 38
+PNGF
 PNGT
-MEM 32
-VOLT 6.33
-AXY 2
+SR1 40
+COLORTDbgMode
+AXY 36
+AXY 37
+PNGF
 PNGT
-MEM 32
-VOLT 5.67
-AXY 91
+Distance Gauche : 92
+COLORFDbgMode
+AXY 37
+AXY 37
+Distance Gauche : 93
+PNGF
+Distance Gauche : 93
 PNGT
-MEM 22
-VOLT 5.71
-AXY 184
-PNGT
-MEM 87
-VOLT 5.74
-AXY 118
-Please update Matrix file with name, zone, and other data
-
-
-COLORTwifiref
 Shutdown requested
 
 Cleaning up

@@ -29,12 +29,12 @@ int dif_angle(int x, int y)
 
 
 void primitive_turn(int SpeedInt, int SpeedExt, long dl, char *ButtonID) {
-int cap, delta;
-static int previousDelta = 999;
+long cap, delta;
+static long previousDelta = 999;
 
   // determine which way to turn
-  cap = get_compas ();
-  delta = dif_angle (PrimValue, cap);
+  cap = (long) get_compas ();
+  delta = (long) dif_angle (PrimValue, cap);
   if (previousDelta == 999) {
     previousDelta = delta;
   }

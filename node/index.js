@@ -239,10 +239,12 @@ io.sockets.on('connection', function (socket) {
         } else if (chaine.indexOf('DRAWMURS') >= 0) {
               n = chaine.indexOf('DRAWMURS');
               socket.emit('drawmurs',chaine.substring(n+8));
-        } else if (chaine.indexOf('DRAWREFS') >= 0) {
-              n = chaine.indexOf('DRAWREFS');
-              socket.emit('drawrefs',chaine.substring(n+8));
-        } else if (chaine.indexOf('COLOR') == 0) {
+        } else if (chaine.indexOf('CLEARPLAN') >= 0) {
+              socket.emit('ClearPlan',chaine.substring(n+8));
+        } else if (chaine.indexOf('DRAWCOLOR') >= 0) {
+              n = chaine.indexOf('DRAWCOLOR');
+              socket.emit('drawcolor',chaine.substring(n+9));
+        } else if (chaine.indexOf('COLOR') >= 0) {
               socket.emit('color',chaine.substring(5));
         } else {
               socket.emit('message','' + data);
