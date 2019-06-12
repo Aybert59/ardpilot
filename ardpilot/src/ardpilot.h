@@ -17,6 +17,10 @@ struct cellule
     unsigned char WifiMatrix; // 0 : pas de matrice de référence ; n = numéro de la matrice mesurée
 };
 
+#define APPT_L 193
+#define APPT_W  93
+#define BORDER 10
+
 struct _ssid
 {
     int updated;    // used during learning process
@@ -37,7 +41,7 @@ struct wifiref
 // prototypes
 
 void control_message (unsigned char action, char *message);
-int exec_cmd (char *buffer);
+int exec_cmd (char *buffer, int debug_mode);
 int write_ard (int fd, char *message);
 void interpret_ard (char *buffer, int debug_mode);
 void exit_on_failure (char *reason);
@@ -57,15 +61,24 @@ int record_wifi_reference (int n);
 
 // from drawing.c
 void draw_plan ();
+void consolidate_points (char *buffer, char segment, char orientation, double X[], double Y[], double mesures[]);
+void draw_segment (char *buffer, char segment, char orientation);
+void draw_line (int xs, int ys, int xe, int ye);
+
 
 // from read_config
 void read_plan();
 void read_matrices();
+void read_wifi_matrixes();
 void write_wifi_matrixes();
 FILE *open_wifi_matrix_file (int MatRef);
 void close_wifi_matrix_file (FILE *fd);
 
 // from commandes.c
 int oriente_robot (int cap_souhaite, int tolerance);
+int bloc_get_top_wifi ();
+int locate_myself ();
+int stop_command_script(char *ScriptName);
+int run_command_script(char *ScriptName);
 
 #endif /* ardpilot_h */

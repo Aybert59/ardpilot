@@ -24,6 +24,7 @@ FILE *logfd = 0;
 int ArdBlocLevel = 0;
 
 int DebugMode = 0;
+char CompasCallibration = 'F';
 
 pid_t process;
 
@@ -74,8 +75,11 @@ void control_message (unsigned char action, char *message)
             close (cmdfd);
             cmdfd = 0;
             cmdfd = open_cmd_socket (PORT_NUMBER);
+          } else {
+            printf ("Error %d while writing to node server\n", errno);
           }
         }
+        //printf ("Message envoyé : %s\n", data);
     } else { // console mode
         printf ("%s", data);
     }
@@ -149,7 +153,12 @@ int read_ard (int fd)
     // le premier char reçu est la longueur de ce qui arrive
     read(fd, &len, 1);
     
-    n = read(fd, buffer, 64);
+    if (DebugMode == 1)
+        printf("%d bytes to read... ",len);
+    n = read(fd, buffer, len);
+    if (DebugMode == 1)
+        printf(" got %d\n",n);
+    
     if (n < 1)
         return 0;
     buffer[n] = '\0';
@@ -169,7 +178,7 @@ int read_ard (int fd)
     {
         interpret_ard (buffer, DebugMode);
     }
- 
+
     return n;
 }
 
@@ -183,8 +192,15 @@ void interpret_ard (char *buffer, int debug_mode)
     char sequence, oldsequence;
     extern int RSSI[5];
     extern char PrimitiveResult;
-    
+    short xmmin, xmmax, ymmin, ymmax, zmmin, zmmax;
+    short xamin, xamax, yamin, yamax, zamin, zamax;
   
+    // for debug only
+    double normX[180];
+    double normY[180];
+    int posx, posy;
+    double val;
+    
     // structure :
     // Buffer[0] : la commande
     // Buffer[1] : le numéro de séquence
@@ -214,7 +230,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server PING\n");
                 
-                control_message(MSG_INFO, "PNGT");
+                control_message(MSG_INFO, "COLORTPing");
                 break;
                 
             case C_LOG :
@@ -226,7 +242,13 @@ void interpret_ard (char *buffer, int debug_mode)
                 
             case C_CMP :
                 sscanf(&(buffer[2]), "%d", &x);
-                Compas = compas_correction[x];
+                if ((x >= 0) && (x < 360))
+                    Compas = compas_correction[x];
+                else
+                {
+                    printf ("    ARD-->Server CMP %d weird value\n", x);
+                    Compas = 0;
+                }
                 
                 if (debug_mode == 1)
                     printf ("    ARD-->Server CMP %d (%d)\n", x, Compas);
@@ -321,7 +343,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 {
                     TopWIFICount = 0;
                     sleep (1);
-                    control_message(MSG_INFO, "TOPWT");
+                    control_message(MSG_INFO, "COLORTTopWifi");
                 }
                 break;
                 
@@ -334,7 +356,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 draw_segment (buffer, buffer[2], C_SCANH);
                 consolidate_points (buffer, buffer[2], C_SCANH, &pointsX, &pointsY, &mesures);
                 
-                if ((int) buffer[2] == 6)
+                if ((int) buffer[2] == 6)  // we received all the points
                 {
                     /*
                      printf ("X = [");
@@ -355,20 +377,61 @@ void interpret_ard (char *buffer, int debug_mode)
                     
                     printf("Checking for objects\n");
                     detectlines (pointsX, pointsY, mesures, 180, LineW, CovSeuil);
-                    printf("Checking for path\n");
-                    detectpath (pointsX, pointsY, mesures, 180, PathW, PathD);
+//                    printf("Checking for path\n");
+//                    detectpath (pointsX, pointsY, mesures, 180, PathW, PathD);
                     
+                    oriente_nord (mesures, 180, 315, normX, normY);             // Test at -45°
+                    val = map_match (normX, normY, 180, 0xC0, &posx, &posy);    // test dans la chambre zone bureau (C0)
+                    if (debug_mode == 1)
+                        printf ("Located at %d,%d\n",posx,posy);
+                    draw_matched_scan (normX, normY, 180, posx, posy);
                 }
                 break;
                 
             case C_SCANV :
                 if (debug_mode == 1)
-                    printf ("    ARD-->Server SCANH\n");
+                    printf ("    ARD-->Server SCANV\n");
 
                 sprintf (message, "received scan segment %c.", buffer[2] + '0');
                 control_message(MSG_INFO, message);
                 draw_segment (buffer, buffer[2], C_SCANV);
                 break;
+            
+            case C_CALCMP :
+                if (debug_mode == 1)
+                    printf ("    ARD-->Server CALCMP\n");
+            
+                xmmin = (buffer[1] << 8) + buffer[2];
+                xmmax = (buffer[3] << 8) + buffer[4];
+                ymmin = (buffer[5] << 8) + buffer[6];
+                ymmax = (buffer[7] << 8) + buffer[8];
+                zmmin = (buffer[9] << 8) + buffer[10];
+                zmmax = (buffer[11] << 8) + buffer[12];
+            
+                xamin = (buffer[13] << 8) + buffer[14];
+                xamax = (buffer[15] << 8) + buffer[16];
+                yamin = (buffer[17] << 8) + buffer[18];
+                yamax = (buffer[19] << 8) + buffer[20];
+                zamin = (buffer[21] << 8) + buffer[22];
+                zamax = (buffer[23] << 8) + buffer[24];
+            
+            
+                sprintf (message, "xm %hd %hd", xmmin, xmmax);
+                control_message(MSG_INFO, message);
+                sprintf (message, "ym %hd %hd", ymmin, ymmax);
+                control_message(MSG_INFO, message);
+                sprintf (message, "zm %hd %hd", zmmin, zmmax);
+                control_message(MSG_INFO, message);
+            
+                sprintf (message, "xa %hd %hd", xamin, xamax);
+                control_message(MSG_INFO, message);
+                sprintf (message, "ya %hd %hd", yamin, yamax);
+                control_message(MSG_INFO, message);
+                sprintf (message, "za %hd %hd", zamin, zamax);
+                control_message(MSG_INFO, message);
+            
+                break;
+            
                 
             case C_PRI :
                 if (debug_mode == 1)
@@ -398,22 +461,10 @@ void interpret_ard (char *buffer, int debug_mode)
     
 }
 
-int write_ard (int fd, char *message)
-{
-    if (send (fd, message, strlen(message) + 1, MSG_NOSIGNAL) < 0) {
-        if (errno == EPIPE) {
-            printf ("Pipe broken, resetting...\n");
-            close (fd);
-            ardfd = 0;
-            ardfd = open_ard_socket (PORT_NUMBER + 1);
-        }
-    }
-}
-
 
 
 /* reads message received on command socket (from node.js) */
-int exec_cmd (char *buffer)
+int exec_cmd (char *buffer, int debug_mode)
 {
     int val, n, dist;
     char message[64];
@@ -474,12 +525,40 @@ int exec_cmd (char *buffer)
             strcat (message, "DbgMode");
             control_message(MSG_INFO, message);
         }
+        else if (!strncmp(buffer, "CALCMP", 6))
+        {
+            if (debug_mode == 1)
+                printf ("    Server-->ARD CALCMP\n");
+            
+            if (CompasCallibration == 'F')
+                CompasCallibration = 'T';
+            else
+                CompasCallibration = 'F';
+        
+            message[0] = C_CALCMP;
+            message[1] = CompasCallibration;
+            message[2] = '\0';
+            write_ard (ardfd, message);
+            
+            sprintf (message, "COLORxCallibCompas");
+            message[5] = CompasCallibration;
+            control_message(MSG_INFO, message);
+        }
+        else if (!strncmp(buffer, "I2CSCAN", 7))
+        {
+            if (debug_mode == 1)
+                printf ("    Server-->ARD I2CSCAN\n");
+            
+            message[0] = C_I2CSCAN;
+            message[1] = '\0';
+            write_ard (ardfd, message);
+        }
         else if (!strncmp(buffer, "RSCPT", 5))
         {
             if (run_command_script(&(buffer[5])) == 1)
-                control_message(MSG_INFO, "SCPTT");
+                control_message(MSG_INFO, "COLORTRunScript");
             else
-                control_message(MSG_INFO, "SCPTF");
+                control_message(MSG_INFO, "COLORFRunScript");
         }
         else if (!strncmp(buffer, "SSCPT", 5))
         {
@@ -515,12 +594,12 @@ int exec_cmd (char *buffer)
             {
                 sleep (2);
 //conflit avec les messages venant du robot
-                //                control_message(MSG_INFO, "TOPWT");
+                //                control_message(MSG_INFO, "COLORTTopWifi");
             }
             else
             {
                 sleep(2);
-//                control_message(MSG_INFO, "TOPWF");
+//                control_message(MSG_INFO, "COLORFTopWifi");
             }
         }
         else if (!strncmp(buffer, "SR1", 3))
@@ -646,9 +725,9 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
             scriptfd = 0;
             if (buffer[3] == 'F')
             {
-                control_message(MSG_INFO, "SCPTF");
+                control_message(MSG_INFO, "COLORFRunScript");
             } else {
-                control_message(MSG_INFO, "SCPTT");
+                control_message(MSG_INFO, "COLORTRunScript");
             }
         }
         else if (!strncmp(buffer, "GOTO", 4))
@@ -686,7 +765,7 @@ int read_cmd (int fd, char fin)
     
     if (n > 0)
     {
-        val = exec_cmd (buffer);
+        val = exec_cmd (buffer, DebugMode);
     }
 
     return val;
@@ -814,16 +893,21 @@ int open_cmd_socket (int portno)
         exit_on_failure ("ERROR on accept");
     }
     control_message(MSG_INFO, "Command connection accepted");
+
+    // enlever les 5 lignes suivantes tq le fd reste en synchrone
+    // dans la boucle d'attente utiliser poll 
     
-    fcntl(fd2, F_SETOWN, getpid());
-    fcntl(fd2, F_SETSIG, SIGIO);
-    flags = fcntl(fd2, F_GETFL);
-    if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
-        exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+    //
+//    fcntl(fd2, F_SETOWN, getpid());
+//    fcntl(fd2, F_SETSIG, SIGIO);
+//    flags = fcntl(fd2, F_GETFL);
+//    if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
+//        exit_on_failure ("fcntl(F_SETFL) error on socket fd");
 
     close (fd1);
     return (fd2);
 }
+
 
 int open_ard_socket (int portno)
 {
@@ -871,6 +955,22 @@ int open_ard_socket (int portno)
     close (fd1);
     return (fd2);
 }
+
+int write_ard (int fd, char *message)
+{
+    if (DebugMode == 1)
+        printf ("    Server-->ARD %d bytes\n", strlen(message) + 1);
+    
+    if (send (fd, message, strlen(message) + 1, MSG_NOSIGNAL) < 0) {
+        if (errno == EPIPE) {
+            printf ("Pipe broken, resetting...\n");
+            close (fd);
+            ardfd = 0;
+            ardfd = open_ard_socket (PORT_NUMBER + 1);
+        }
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -975,7 +1075,7 @@ int main(int argc, char *argv[])
         cmdfd = open_cmd_socket (PORT_NUMBER);
         
         // initialiser la couleur du ping à orange
-        control_message(MSG_INFO, "PNGF");
+        control_message(MSG_INFO, "COLORFPing");
         sleep (1);
         if (optFileName == 1)
         {
@@ -987,6 +1087,7 @@ int main(int argc, char *argv[])
         // dessiner le plan de l'appart
         sleep(1);
         draw_plan();
+        init_appt_distances ();
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
         control_message(MSG_INFO, "Now opening arduino channel ... ");

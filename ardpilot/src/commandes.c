@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/poll.h>
 
 #include "ardpilot_grammar.h"
 #include "ardpilot.h"
@@ -49,20 +50,43 @@ void boucle_attente (unsigned char parametre, unsigned char sequence, int autori
 {
     static int loopCnt = 0;
     char buffer[4];
-
+    struct pollfd fds[1];
+    extern int cmdfd;
+    int ret;
+    
     printf("WARING SHOULD NOT USE boucle_attente ANYMORE\n");
     
+    fds[0].fd = cmdfd;
+    fds[0].events = POLLIN;
+
     while ((Sequence[parametre] != sequence) && (( Sequence[parametre] != '*') || (autorise_wildchar == 0)))
     {
         // attente soit du retour de la séquence demandée, soit ecrasée par une commande de l'interface graphique
 
 //printf ("waiting %d %d %d\n", (int) parametre, (int) Sequence[parametre], (int) sequence);
         loopCnt++;
-        sleep (1);
+        ret = poll(fds, 1, 1000); // attente 1 seconde, remplace le sleep(1)
+        
+/* debug the poll
+ if (ret == -1) {
+            printf ("erreur lors du poll\n"); // timeout has been interrupted (by a SIGIO on other FDs)
+        } else if (ret == 0) {
+            printf ("nothing to read\n"); // timeout
+        } else {
+            printf ("something to read\n");
+        }
+*/
+        if (fds[0].revents & POLLIN)
+        {
+            // something available
+            read_cmd (cmdfd, '\0');
+        }
+        
+        //sleep (1); was needed when both FDs were async. now replaced by the poll.
         if ((loopCnt == 20) && (NoInterrupt == 0))
         {
             // demander un ping toutes les 20 secondes
-            control_message(MSG_INFO, "PNGF");
+            control_message(MSG_INFO, "COLORFPing");
             
             buffer[0] = C_PING;
             buffer[1] = '\0';

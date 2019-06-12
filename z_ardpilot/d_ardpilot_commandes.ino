@@ -56,7 +56,7 @@ void set_servo (char servo, char sequence, int angle) {
     delay(400);
 }
 
-void manage_command (int len) {
+void manage_command (byte len) {
   unsigned long t;
   char cmd, v;
   byte i;
@@ -83,6 +83,67 @@ void manage_command (int len) {
     digitalWrite (LED, v);
     break;
 
+/*  case C_CALCMP:
+  
+    if (ibuffer[1] == 'T')
+    {
+      digitalWrite (LED, 1);
+      CallibCompas = true;
+      xmmin = 32767;
+      xmmax = -32768;
+      ymmin = 32767;
+      ymmax = -32768;
+      zmmin = 32767;
+      zmmax = -32768;
+      
+      xamin = 32767;
+      xamax = -32768;
+      yamin = 32767;
+      yamax = -32768;
+      zamin = 32767;
+      zamax = -32768;
+    }
+    else
+    {
+      digitalWrite (LED, 0);
+      CallibCompas = false;
+      delay (1000);
+   
+      obuffer[0] = C_CALCMP;
+      obuffer[1] = highByte (xmmin);
+      obuffer[2] = lowByte (xmmin);
+      obuffer[3] = highByte (xmmax);
+      obuffer[4] = lowByte (xmmax);
+
+      obuffer[5] = highByte (ymmin);
+      obuffer[6] = lowByte (ymmin);
+      obuffer[7] = highByte (ymmax);
+      obuffer[8] = lowByte (ymmax);
+
+      obuffer[9] = highByte (zmmin);
+      obuffer[10] = lowByte (zmmin);
+      obuffer[11] = highByte (zmmax);
+      obuffer[12] = lowByte (zmmax);
+
+      obuffer[13] = highByte (xamin);
+      obuffer[14] = lowByte (xamin);
+      obuffer[15] = highByte (xamax);
+      obuffer[16] = lowByte (xamax);
+
+      obuffer[17] = highByte (yamin);
+      obuffer[18] = lowByte (yamin);
+      obuffer[19] = highByte (yamax);
+      obuffer[20] = lowByte (yamax);
+
+      obuffer[21] = highByte (zamin);
+      obuffer[22] = lowByte (zamin);
+      obuffer[23] = highByte (zamax);
+      obuffer[24] = lowByte (zamax);
+ 
+      wifi_write_binary(25);
+    }
+    break;
+*/
   case C_LIDAR:
   
     get_lidar (sequence);
@@ -100,7 +161,12 @@ void manage_command (int len) {
 
     get_angle(sequence);
     break;
+    
+  case C_I2CSCAN:
 
+    I2Cscan();
+    break;
+  
   case C_PARM:
 
     parameter = (unsigned char) ibuffer[1]; // get the parameter
@@ -110,34 +176,68 @@ void manage_command (int len) {
       case F_INIT :
         reload_config_parameters();
       break;
-      case F_SRV1 :
+      case F_DEBUG :
+        if (!(strcmp (&(ibuffer[2]), "true")))
+          DebugMode = true; 
+        else
+          DebugMode = false;
+      break;
+/*      case F_XMMIN :
+        xmmin = atoi(&(ibuffer[2])); 
+      break;
+      case F_XMMAX :
+        xmmax = atoi(&(ibuffer[2])); 
+      break;
+      case F_YMMIN :
+        ymmin = atoi(&(ibuffer[2])); 
+      break;
+      case F_YMMAX :
+        ymmax = atoi(&(ibuffer[2])); 
+      break;
+      case F_ZMMIN :
+        zmmin = atoi(&(ibuffer[2])); 
+      break;
+      case F_ZMMAX :
+        zmmax = atoi(&(ibuffer[2])); 
+      break;
+      case F_XAMIN :
+        xamin = atoi(&(ibuffer[2])); 
+      break;
+      case F_XAMAX :
+        xamax = atoi(&(ibuffer[2])); 
+      break;
+      case F_YAMIN :
+        yamin = atoi(&(ibuffer[2])); 
+      break;
+      case F_YAMAX :
+        yamax = atoi(&(ibuffer[2])); 
+      break;
+      case F_ZAMIN :
+        zamin = atoi(&(ibuffer[2])); 
+      break;
+      case F_ZAMAX :
+        zamax = atoi(&(ibuffer[2])); 
+      break;
+*/      case F_SRV1 :
         ServoDelay = atoi(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));
- wifi_write();
       break;
       case F_DMIN :
         DistanceMin = atoi(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));
- wifi_write();
       break;
       case F_AJUST :
         AjustementMoteur = atoi(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));
- wifi_write();
       break;
       case F_ALIGN :
         FacteurAlignement = atof(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));
- wifi_write();
       break;
       case F_PNGNUM :
         PngNum = atoi(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));
+strcpy (&(obuffer[1]), &(ibuffer[2]));  // keep this one as kind of prrof of read
  wifi_write();
       break;
       default :
-        strcpy (&(obuffer[1]), "Unknown Parameter in config file");
-        wifi_write();
+//        strcpy (&(obuffer[1]), "Unknown Parameter in config file");
+//        wifi_write();
       break;
       }
     
@@ -196,7 +296,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
     {
       if (Primitive != P_NULL) {
         obuffer[0] = C_LOG;
-        strcpy (&(obuffer[1]), "Overriding action : ");
+        strcpy (&(obuffer[1]), "Overriding prim ");
         itoa ((unsigned int) Primitive, &(obuffer[19]), 16);
         wifi_write ();
       }
@@ -222,7 +322,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
         // initialisation de la primitive;
  
         PrimValue = atoi(&(ibuffer[3])); // consigne d'angle
-        cap = get_compas (); // angle actuel
+        cap = get_compas (false); // angle actuel
 
         // determine which way to turn - global var so no need to calculate each time
         b1 = dif_angle (PrimValue, cap);
@@ -243,7 +343,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
       case P_SUIVI_G :
      
         if (Primitive == P_AVANT_CAP)
-          CapASuivre = get_compas ();
+          CapASuivre = get_compas (false);
         else
           CapASuivre = -1;
                    
@@ -282,7 +382,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));
       }
     } else {
       obuffer[0] = C_LOG;
-      strcpy (&(obuffer[1]), "Can't override action : ");
+      strcpy (&(obuffer[1]), "Can't override ");
       itoa ((unsigned int) Primitive, &(obuffer[23]), 16);
       wifi_write ();
       

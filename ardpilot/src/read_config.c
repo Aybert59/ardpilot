@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "ardpilot_grammar.h"
 #include "ardpilot.h"
@@ -15,6 +16,7 @@ extern int ardfd;
 #define CONFIG_FILE "ardpilot.conf"
 #define COMPAS_FILE "compas2.csv"
 #define PLAN_FILE "plan.csv"
+#define DIST_FILE "plan_distances.csv"
 #define MATRIX_FILE "matrices_wifi.txt"
 
 int compas_correction[360]; // retourne cap affiché en fonction cap du robot - 0 = boulevard, 180 = jardin
@@ -48,8 +50,9 @@ float carto_vitesse[] = {0.00,
     152.87};
 
 
-struct cellule Appartement [193][93];
-struct wifiref WifiMatrix[64]; // avec 64 matrices on va s'en sortir ...
+struct cellule Appartement [APPT_L][APPT_W];
+float ApptDistances [APPT_L+BORDER*2][APPT_W+BORDER*2]; // appartment size + 1 meter all around
+struct wifiref WifiMatrix[64]; // 64 matrcies should be enough ...
 int MaxMatrices;
 
 float CovSeuil = 50.0;
@@ -116,6 +119,7 @@ void read_and_send_config ()
     ssize_t read;
     char message[32];
     static int first_time = 1;
+    int count = 0;
     
     if (first_time == 1)
     {
@@ -132,71 +136,144 @@ void read_and_send_config ()
         while ((read = getline(&line, &len, fd)) != -1) {
             if ((read > 1) && (line[0] != '#'))
             {
-             
+                message[0] = C_PARM;
+                message[1] = '\0';
+                sscanf (line, "%*s %s", &(message[2]));
+                count++;
+                
                 if (!strncmp(line, "SRV1", 4))
-                {
-                    message[0] = C_PARM;
                     message[1] = F_SRV1;
-                    sscanf (line, "%*s %s", &(message[2]));
-                    write_ard (ardfd, message);
-                }
+                else if (!strncmp(line, "DEBUG", 5))
+                    message[1] = F_DEBUG;
                 else if (!strncmp(line, "DMIN", 4))
-                {
-                    message[0] = C_PARM;
                     message[1] = F_DMIN;
-                    sscanf (line, "%*s %s", &(message[2]));
-                    write_ard (ardfd, message);
-                }
                 else if (!strncmp(line, "AJUST", 5))
-                {
-                    message[0] = C_PARM;
                     message[1] = F_AJUST;
-                    sscanf (line, "%*s %s", &(message[2]));
-                    write_ard (ardfd, message);
-                }
                 else if (!strncmp(line, "ALIGN", 5))
-                {
-                    message[0] = C_PARM;
                     message[1] = F_ALIGN;
-                    sscanf (line, "%*s %s", &(message[2]));
-                    write_ard (ardfd, message);
-                }
                 else if (!strncmp(line, "PNGNUM", 6))
-                {
-                    message[0] = C_PARM;
                     message[1] = F_PNGNUM;
-                    sscanf (line, "%*s %s", &(message[2]));
-                    write_ard (ardfd, message);
-                }
                 else if (!strncmp(line, "COVSEUIL", 8))
-                {
                     sscanf (line, "%*s %f", &CovSeuil);
-                    printf ("Param CovSeuil %f\n", CovSeuil);
-                }
                 else if (!strncmp(line, "LINEW", 5))
-                {
                     sscanf (line, "%*s %d", &LineW);
-                    printf ("Param LineW %d\n", LineW);
-                }
                 else if (!strncmp(line, "PATHW", 5))
-                {
                     sscanf (line, "%*s %d", &PathW);
-                    printf ("Param PathW %d\n", PathW);
-                }
                 else if (!strncmp(line, "PATHD", 5))
-                {
                     sscanf (line, "%*s %d", &PathD);
-                    printf ("Param PathD %d\n", PathD);
-                }
+                
+                if (message[1] != '\0')
+                    write_ard (ardfd, message);
             }
         }
         free (line);
         fclose (fd);
+        printf ("Read %d parameters in Config file\n", count);
     } else {
         printf ("Config file unreadable !\n");
     }
     
     read_compas_correction();
+}
+
+void init_appt_distances ()
+{
+    int i,j;
+    int x,y;
+    int c;
+    float d;
+    FILE *fd;
+    char filename[256];
+
+    
+    // initiates a table ApptDistances which represents the appartment map plus 1 meter all around
+    // each cell contains the distance in cm to the nearest wall
+    // to be used by the map matching algorithm
+ 
+    ///////////////////////////////////////////////////////////////////////////////////
+    // en fait vérifier si ix un fichier distances plus récent que fichier appart.
+    // si oui juste le lire ; si non le créer
+    ///////////////////////////////////////////////////////////////////////////////////
+    
+    printf ("Entering init_appt_distances\n");
+    
+    strcpy (filename, CONFDIR);
+    strcat (filename, "/");
+    strcat (filename, DIST_FILE);
+    fd = fopen (filename, "r");
+    if (fd != NULL)
+    {
+        for (i=0; i<(APPT_L+BORDER*2); i++)
+        {
+            for (j=0; j<(APPT_W+BORDER*2); j++)
+            {
+                fscanf (fd, "%f ", &(ApptDistances[i][j]));
+            }
+        }
+        fclose (fd);
+    }
+    else // file not found, creating one
+    {
+    
+        printf ("no file found, initializing\n");
+    
+        for (i=0; i<(APPT_L+BORDER*2); i++)
+            for (j=0; j<(APPT_W+BORDER*2); j++)
+            {
+
+                ApptDistances[i][j] = 300.0;
+                for (c=0;c<20;c++) // search for a wall within a square of C size (unit = 10 cm)
+                    // start small and grow until we reach a wall
+                {
+                    for (x=i-c; x<=i+c; x++)
+                        for (y=j-c; y<=j+c; y++)
+                        {
+                            if ((x >= BORDER) && (x < APPT_L+BORDER) && (y >= BORDER) && (y < APPT_W+BORDER))
+                                // we are within the appartment boundaries
+                            {
+                                if (Appartement[x-BORDER][y-BORDER].piece == 0x0F)
+                                    // we found a wall
+                                {
+                                    d = sqrtf ((float)((i-x)*(i-x) + (j-y)*(j-y))) * 10.0; // one unit for 10cm
+                                    if (d < ApptDistances[i][j])
+                                        ApptDistances[i][j] = d;
+                                }
+                            }
+                        }
+                }
+            }
+        
+        printf ("writing distance file\n");
+        fd = fopen (filename, "w");
+        if (fd != NULL)
+        {
+            for (i=0; i<(APPT_L+BORDER*2); i++)
+            {
+                for (j=0; j<(APPT_W+BORDER*2); j++)
+                {
+                    fprintf (fd, "%f ", ApptDistances[i][j]);
+                }
+                fprintf (fd, "\n");
+            }
+            fclose (fd);
+        }
+    }
+    
+    
+    
+    printf ("exiting init_appt_distances\n");
+/*
+    // print 20 first lines as debug
+    for (i=0; i<(APPT_L+BORDER*2); i++)
+    {
+        printf("**** ");
+        for (j=0; j<(APPT_W+BORDER*2); j++)
+        {
+            printf("%.0f ", ApptDistances[i][j]);
+        }
+        printf("\n");
+    }
+ */
 }
 
 void read_plan()
@@ -211,7 +288,7 @@ void read_plan()
     int start, end;
     int piece, zone;
     int wifi_ref;
-int i,j;
+    int i,j;
     
     // initialisation
     lines=0;
@@ -273,7 +350,7 @@ int i,j;
         }
         free (line);
         fclose (fd);
-        if (lines == 193)
+        if (lines == APPT_L)
             printf ("Read %d lines in plan : OK\n", lines);
         else
             printf ("WARNING read %d lines in plan : NOT OK\n", lines);
@@ -281,10 +358,12 @@ int i,j;
         printf ("Plan file unreadable !\n");
     }
     
+    //init_appt_distances ();
+    
 /* debug
-    for (i=0;i<193;i++)
+    for (i=0;i<APPT_L;i++)
     {
-        for (j=0;j<93;j++)
+        for (j=0;j<APPT_W;j++)
         {
             if (Appartement[i][j].piece == 0x00)
                 printf(";");
@@ -320,7 +399,7 @@ void write_plan()
     fd = fopen (filename, "w");
     if (fd != NULL)
     {
-        for (lines=0; lines<193; lines++)
+        for (lines=0; lines<APPT_L; lines++)
         {
 // WIP
             printf ("Write plan not yet available\n");

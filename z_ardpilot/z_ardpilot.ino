@@ -1,6 +1,5 @@
 
 
-
 //////////////////////////////////////////
 //
 // main
@@ -16,49 +15,35 @@
 
 // include the library code:
 
+#include <Arduino.h>
 #include <Wire.h> //I2C Arduino Library
 #include <Servo.h>
 #include "grammar.h"
 #include <SoftwareSerial.h>
 #include <NewPing.h>
+#include <U8x8lib.h>
 
 // Wifi Shield
 
 #include <WiFly.h>
 #include <WiFlyClient.h>
 
-#ifdef DEBUG_ARDPILOT
-#define DBGPRT(message)    Serial.print(message)
-#define DBGPRTLN(message)  Serial.println(message)
-#define SERIALBEGIN(toto)  Serial.begin(toto)
-#define WIFLY_TX 3
-#define WIFLY_RX 7
-#define UARTSPEED 115200
-#define UART uart
-#define DECLARE_UART      SoftwareSerial uart(WIFLY_TX, WIFLY_RX)
-#else
-#define DBGPRT(message)
-#define DBGPRTLN(message)
-#define SERIALBEGIN(toto)
-#define WIFLY_TX 0
-#define WIFLY_RX 1
-#define UARTSPEED 9600
-#define UART Serial
-#define DECLARE_UART
-#endif
 
  // WIFLY reference : http://www.seeedstudio.com/wiki/Wifi_Shield_V2.0
-DECLARE_UART; // create a serial connection to the WiFi shield TX and RX pins.
-WiFly wifly(&UART); // create a WiFly library object using the serial connection to the WiFi shield we created above.
+WiFly wifly(&Serial); // create a WiFly library object using the serial connection to the WiFi shield we created above.
 
 
 
+// Ecran : référence ici : https://github.com/olikraus/u8g2/wiki et https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+U8X8_SSD1306_128X64_NONAME_HW_I2C ecran(U8X8_PIN_NONE);
 
 #define host "192.168.1.3"
-const int port = 8002;
+#define port 8002
 
-const int Compass_address = 0x1E; //0011110b, I2C 7bit address of HMC5883 (compass)
+
 const int Lidar_address = 0x62; 
+// #define BNO055_ADDRESS 0x29
+// adresse écran 3C
 
 const int LED = 13;
 
@@ -69,11 +54,19 @@ const int ECHO_U = 5;   // capteur ultrason
 
 NewPing SonarAV (TRIG_U, ECHO_U);
 
-char ibuffer[64];
+char ibuffer[64];  // optimisation, ne pas allouer de mémoire tampondans le scan des SSIDs
 char obuffer[64];
-bool WifiConnected = false;
-long ipaddr = 0;
 
+bool WifiConnected = false;
+//bool CallibCompas = false;
+bool DebugMode = false;
+bool Initialisation = true;
+
+long ipaddr = 0;
+/*
+int xmmin = 0, xmmax = 0, ymmin = 0, ymmax = 0, zmmin = 0, zmmax = 0;
+int xamin = 0, xamax = 0, yamin = 0, yamax = 0, zamin = 0, zamax = 0;
+*/
 // roues
 Servo ServoLeft;      
 Servo ServoRight;
@@ -182,34 +175,31 @@ void setup() {
   digitalWrite (TRIG_U, LOW);
   digitalWrite (ENABLE_L, LOW); // low : use the i2c
 
-  UART.begin(9600); // start the serial connection to the shield
-
-  // for debug only
-  SERIALBEGIN(UARTSPEED);  // start the Arduino serial monitor window connection
+  Wire.begin();
+  begin_ecran ();
+  ecran.print (F("Hello ...\n"));
+ 
+  Serial.begin(9600); // start the serial connection to the shield
 
   delay(3000); // wait 3 second to allow the serial/uart object to start
 
   wifly.reset(); // reset the shield 
 
   CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
+  ecran.print (ssid[CurrentAP]);
+  ecran.print (" ");
   while (!wifly.join(ssid[CurrentAP], pass[CurrentAP],WIFLY_AUTH_WPA2_PSK)) {
       delay (100);
   }
-  
+  ecran.print ("ok\n");
 }
 
 void terminate_setup () {
 
   
-  //Put the HMC5883 IC (compass) into the correct operating mode
-  Wire.begin();
+  //Put the  (compass) into the correct operating mode
+  initialize_bno055();
   
-//  Wire.beginTransmission(Compass_address); //open communication with HMC5883 compass
-//  Wire.write(0x02); //select mode register
-//  Wire.write(0x00); //continuous measurement mode
-//  Wire.endTransmission();
-
-//  delay(20);
 
 //  Wire.beginTransmission(Lidar_address); //open communication with Lidar lite V3
 //  Wire.write((int)0x00); // sets register pointer to  (0x00)  
@@ -244,18 +234,19 @@ void terminate_setup () {
 void loop() {
   long dl;
   char cmd;
-  int len;
+  byte len;
   static long loop_cnt;
 
 
   if (!WifiConnected) {
-      DBGPRT("Going to connect throught TCP... ");
+      ecran.print ("Server.. ");
       if (!wifly.connect (host, port)) {
-        led_blink (2, 100, 100);          
+        led_blink (2, 100, 100);
+        ecran.print ("\n");          
         return;  
       }
+      ecran.print ("ok\n");
       
-      DBGPRTLN("Succeed.");
       WifiConnected = true;
       obuffer[0] = 'a'; //dummy
       obuffer[1] = '\0';
@@ -281,12 +272,7 @@ void loop() {
     // Check for any data has come to Wifly  
     len = 0;
     len = wifi_read (); 
-    if (len > 0) {
-      DBGPRT("Received ");
-      DBGPRT(len);
-      DBGPRT(" Bytes : ");
-      DBGPRTLN(".");
-      
+    if (len > 0) {    
       manage_command (len);
     } 
       
@@ -339,7 +325,11 @@ void loop() {
     // we just finished something, let's send health information
       send_robot_status ();
     }
-        
+
+/*    if (CallibCompas == true) {
+      get_compas (true);    
+    }
+*/    
     loop_cnt++; // in order to implement some functions at certain time only
 
     if (loop_cnt > 1000000) // !! 1 000 000 corespond à peine à 7 secondes environ !!! (on peut aller jusqu'à 2 milliards ...)
@@ -354,6 +344,11 @@ void loop() {
         digitalWrite (LED, LOW);
         wifly.reboot();
         resetFunc();  
+      }
+      if (Initialisation == true)
+      {
+        Initialisation = false;
+        ecran.setPowerSave(1);
       }
     }
     OldPrimitive = Primitive;

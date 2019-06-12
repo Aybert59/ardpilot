@@ -185,8 +185,9 @@ io.sockets.on('connection', function (socket) {
     console.log('Un client est connecté !');
     socket.emit('message',' \n');
     socket.emit('message','You\'re properly connected to the server\n');
-    socket.emit('message','You can now switch the robot on\n');
-              
+    socket.emit('message','You can now switch the robot on...\n');
+       
+             
     client.connect(PORT, HOST, function() {
         console.log('CONNECTED TO: ' + HOST + ':' + PORT);
     });
@@ -200,23 +201,7 @@ io.sockets.on('connection', function (socket) {
            
         // from server to Web interface
               
-        if (chaine.indexOf('PNGT') == 0) {
-              socket.emit('pongT','received pong T\n');
-        } else if (chaine.indexOf('PNGF') == 0) {
-              socket.emit('pongF','received pong F\n');
-        } else if (chaine.indexOf('LOCF') == 0) {
-              socket.emit('locF','received Locate F\n');
-        } else if (chaine.indexOf('LOCT') == 0) {
-              socket.emit('locT','received Locate T\n');
-        } else if (chaine.indexOf('SCPTT') == 0) {
-              socket.emit('scptT','received script successful\n');
-        } else if (chaine.indexOf('SCPTF') == 0) {
-              socket.emit('scptF','received script Failed\n');
-        } else if (chaine.indexOf('TOPWF') == 0) {
-              socket.emit('TopWifiF','received TopWifi F\n');
-        } else if (chaine.indexOf('TOPWT') == 0) {
-              socket.emit('TopWifiT','received TopWifi T\n');
-        } else if (chaine.indexOf('AXY') == 0) {
+        if (chaine.indexOf('AXY') == 0) {
             socket.emit('axy',chaine.substring(3));
         } else if (chaine.indexOf('VOLT') == 0) {
               socket.emit('volt',chaine.substring(4));
@@ -239,11 +224,17 @@ io.sockets.on('connection', function (socket) {
         } else if (chaine.indexOf('DRAWMURS') >= 0) {
               n = chaine.indexOf('DRAWMURS');
               socket.emit('drawmurs',chaine.substring(n+8));
+        } else if (chaine.indexOf('DRAWMAPSCAN') >= 0) {
+              n = chaine.indexOf('DRAWMAPSCAN');
+              socket.emit('drawmapscan',chaine.substring(n+11));
         } else if (chaine.indexOf('CLEARPLAN') >= 0) {
               socket.emit('ClearPlan',chaine.substring(n+8));
         } else if (chaine.indexOf('DRAWCOLOR') >= 0) {
               n = chaine.indexOf('DRAWCOLOR');
               socket.emit('drawcolor',chaine.substring(n+9));
+        } else if (chaine.indexOf('DRAWLINE') >= 0) {
+              n = chaine.indexOf('DRAWLINE');
+              socket.emit('drawline',chaine.substring(n+8));
         } else if (chaine.indexOf('COLOR') >= 0) {
               socket.emit('color',chaine.substring(5));
         } else {
@@ -254,35 +245,28 @@ io.sockets.on('connection', function (socket) {
     // from Web interface to server
        
     socket.on('cmd', function (message) {
-      client.write(message);
+      client.write(message + '\0');
     });
 
             
-//    socket.on('wifiref', function (message) {
-//      client.write('WREF');
-//    });
-//    socket.on('locate', function (message) {
-//      client.write('LOCT');
-//    });
     socket.on('LogFile', function (message) {
-      client.write('LOGF' + message);
+      client.write('LOGF' + message + '\0');
     });
     socket.on('config', function (message) {
-      client.write('CFG');
+      client.write('CFG' + '\0');
     });
     socket.on('servo1', function (message) {
-        client.write('SR1' + message);
+        client.write('SR1' + message + '\0');
     });
     socket.on('servo2', function (message) {
-        client.write('SR2' + message);
+        client.write('SR2' + message + '\0');
     });
     socket.on('scan', function (message) {
-            console.log('Message reçu : ' + message);
-            client.write('SCN' + message);
+            client.write('SCN' + message + '\0');
     });
     socket.on('goto', function (message) {
             console.log('Message reçu : ' + message);
-            client.write('GOTO' + message);
+            client.write('GOTO' + message + '\0');
 
     });
 

@@ -5,7 +5,108 @@
 //////////////////////////////////////////
 
 #include <MemoryFree.h>
-#include <HMC5883L.h>
+
+// addresses for the magneto/accel/gyro 
+#define BNO055_ADDRESS 0x28
+
+
+
+// docs et refs du compas https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/downloads 
+
+void I2Cscan()
+{
+  byte error, address;
+  int nDevices;
+ 
+  ecran.clear();
+  ecran.setPowerSave(0);
+  ecran.print("scanning i2c...\n");
+ 
+  nDevices = 0;
+  for(address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+ 
+    if (error == 0)
+    {
+      ecran.print(" ");
+      ecran.print(address,HEX);
+        
+      nDevices++;
+    }
+    else if (error==4)
+    {
+      ecran.print(" *");
+      ecran.print(address,HEX);
+      ecran.print("*");
+    }    
+
+    delay(20);
+  }
+  if (nDevices == 0)
+    ecran.print(" No I2C devices found\n");
+  else
+    ecran.print(" done\n");
+  
+}
+
+void I2Cread(uint8_t Address, uint8_t Register, uint8_t Nbytes, uint8_t* Data)
+{
+  uint8_t index=0;
+  byte error;
+  
+  // Set register address
+  Wire.beginTransmission(Address);
+  Wire.write(Register);
+  error = Wire.endTransmission();
+  if (error != 0)
+  {
+      ecran.print("No I2C device\n");
+      ecran.print("read at ");
+      ecran.print(Address);
+      ecran.print("\n");
+      ecran.print("error ");
+      ecran.print(error);
+      ecran.print("\n");
+      delay (5000);
+  }
+  delay(20); // Wait 20ms for transmit
+  
+  // Read Nbytes
+  Wire.requestFrom(Address, Nbytes); 
+  while (Wire.available())
+    Data[index++]=Wire.read();
+}
+
+// Write a byte (Data) in device (Address) at register (Register)
+void I2CwriteByte(uint8_t Address, uint8_t Register, uint8_t Data)
+{
+  byte error;
+  
+  // Set register address
+  Wire.beginTransmission(Address);
+  Wire.write(Register);
+
+  delay(20); // Wait 20ms for transmit
+  
+  Wire.write(Data);
+  error = Wire.endTransmission();
+    if (error != 0)
+  {
+      ecran.print("No I2C device\n");
+      ecran.print("write at ");
+      ecran.print(Address);
+      ecran.print("\n");
+      ecran.print("error ");
+      ecran.print(error);
+      ecran.print("\n");
+      delay (5000);
+  }
+}
 
 // Ultrasonic sensors reading
 
@@ -45,7 +146,7 @@ int measure_distance_lidar_i2c () {
   return val;
   
 }
-
+/*
 long measure_distance_lidar_pwm (int n) {
   long d, s, moy, ecart = 0, somme = 0;
   int i, j;
@@ -86,6 +187,7 @@ long measure_distance_lidar_pwm (int n) {
   
   return moy;
 }
+*/
 
 long measure_distance (int n) {
   long li,us, d;
@@ -105,19 +207,19 @@ long measure_distance (int n) {
 }
 
 void get_distance (byte side) {
-  long d;
+ // long d;
     
-  d = measure_distance (3);
+ // d = measure_distance (3);
   
   obuffer[0] = side;
-  ltoa (d, &(obuffer[1]), 10);
+  ltoa (measure_distance (3), &(obuffer[1]), 10);
   wifi_write ();
 
 }
 
 void scan_distance (byte side, char sequence) {
-int angle, segment;
-int d;
+int angle, d;
+byte segment;
 
   if (side == C_SCANH) {
     servo2.write (0);
@@ -139,15 +241,12 @@ int d;
       servo1.write (angle + 30*segment);
       delay (ServoDelay);
 
-      d = (unsigned int) min (0x7fff ,measure_distance (3)); // (limite à 5m50 environ, suffisant car capteur ultrason va jusqu'a 1m80 !
-      // garder un bit libre sur l'octet de gauche
-      // tq on manip pour eviter les 0
-      
-      obuffer[3+(angle*2)] = highByte (d) + 128 ; // forcer le 1er bit, on l'enlèvera de l'autre cote. De la sorte ne vaut jamais 0
-      obuffer[4+(angle*2)] = max (lowByte (d), 1);  // si 0 alors on ajoute 1
+      d = (unsigned int) measure_distance (3); // (limite à 5m50 environ, suffisant car capteur ultrason va jusqu'a 1m80 !
+       
+      obuffer[3+(angle*2)] = highByte (d);
+      obuffer[4+(angle*2)] = lowByte (d);  // si 0 alors on ajoute 1
     }
-    obuffer[63] = '\0';
-    wifi_write ();
+    wifi_write_binary (63);
   }
   
 
@@ -226,7 +325,42 @@ return;
 
 // compass reading
 
-int get_compas () {
+void initialize_bno055() {
+  uint8_t unitsel;
+return;
+
+  // Set normal power mode
+  I2CwriteByte (BNO055_ADDRESS,0x3e,0x00);
+  delay(10);
+
+  // select register data units
+  unitsel = (0 << 7) | // Orientation = Android
+                    (0 << 4) | // Temperature = Celsius
+                    (0 << 2) | // Euler = Degrees
+                    (1 << 1) | // Gyro = Rads
+                    (0 << 0);  // Accelerometer = m/s^2
+  I2CwriteByte (BNO055_ADDRESS, 0x3b, unitsel);
+  delay(10);
+
+  // remap the axes
+  I2CwriteByte (BNO055_ADDRESS,0x41,0x06);
+  delay(10);
+  I2CwriteByte (BNO055_ADDRESS,0x42,0x07);
+  delay (10);
+
+  // Set operation mode (full fusion)
+  I2CwriteByte (BNO055_ADDRESS,0x3d,0x0c);
+  delay(10);
+  
+  ecran.clear();
+  ecran.setPowerSave(0);
+  ecran.print("Setup OK\n");
+  delay(2000);
+}
+
+  
+/*
+int get_compas (bool callibration) {
   int x,y,z; //triple axis data
   double angle;
 
@@ -254,14 +388,73 @@ int get_compas () {
      y |= Wire.read(); //Y lsb
   }
 
-  angle = atan2((double)y,(double)x) * 57.2957796 + 180.0;
-  return ((int) angle);
+  if (callibration == false)
+  {
+    angle = atan2((double)y,(double)x) * 57.2957796 + 180.0;
+    return ((int) angle);
+  } else {
+    if (x < xmmin) xmmin = x;
+    if (x > xmmax) xmmax = x;
+    if (y < ymmin) ymmin = y;
+    if (y > ymmax) ymmax = y;
+    if (z < zmmin) zmmin = z;
+    if (z > zmmax) zmmax = z;
+    delay(50);
+    return 0;
+  }
+}
+*/
+
+int get_compas (bool callibration) {
+  int8_t temp;
+  uint8_t euler[6];
+  int16_t heading=0, pitch=0, roll=0;
+return (0);
+//debug
+  ecran.clear();
+  ecran.setPowerSave(0);
+  ecran.print("BNO 055\n");
+  
+  I2Cread (BNO055_ADDRESS, 0x34, 1, &temp);
+  I2Cread (BNO055_ADDRESS, 0x1a, 6, euler);
+
+  heading = (((uint16_t)euler[1]) << 8) | ((uint16_t)euler[0]);
+  roll = (((uint16_t)euler[3]) << 8) | ((uint16_t)euler[2]);
+  pitch = (((uint16_t)euler[5]) << 8) | ((uint16_t)euler[4]);
+
+
+// afficher les valeurs sur l'écran
+
+  ecran.clear();
+  ecran.setPowerSave(0);
+  
+  ecran.setCursor(0, 1);
+  ecran.print("head");
+  ecran.setCursor(6, 1);
+  ecran.print(heading);
+  
+  ecran.setCursor(0, 2);
+  ecran.print("roll");
+  ecran.setCursor(6, 2);
+  ecran.print(roll);
+  
+  ecran.setCursor(0, 3);
+  ecran.print("pitch");
+  ecran.setCursor(6, 3);
+  ecran.print(pitch);
+  
+  ecran.setCursor(0, 5);
+  ecran.print("temp");
+  ecran.setCursor(6,5);
+  ecran.print(temp);
+    
+  return (heading);
 }
 
 void get_angle(char sequence) {
   int a;
   
-  a = get_compas ();
+  a = get_compas (false);
   obuffer[0] = C_CMP;
   obuffer[1] = sequence;
   itoa (a, &(obuffer[2]), 10);

@@ -98,23 +98,20 @@ void wifi_display_IP () // and complete some setup
   wifly.find((char *)"192.168.1.");
   i = wifly.parseInt();
   
-  DBGPRT("IP - 192.168.1.");
-  DBGPRTLN(i);
-
   
   wifly.dataMode();
   wifi_clear_input();
   
   obuffer[0] = C_LOG;
-  strcpy (&(obuffer[1]), "IP - 192.168.1.");
-  itoa (i,&(obuffer[16]),10);
+  strcpy (&(obuffer[1]), "IP 192.168.1.");
+  itoa (i,&(obuffer[15]),10);
   wifi_write();
   
 }
 
-int wifi_read ()
+byte wifi_read ()
 {
-  int len = 0;
+  byte len = 0;
   
   if (wifly.available()) {
     len = wifly.readBytesUntil('\0', ibuffer, 64);
@@ -124,6 +121,11 @@ int wifi_read ()
   return len;
 }
 
+// when buffer size is unknown
+// write until it meets '\0'
+// not suitable for raw data which may contain zeros
+// see wifi_write_binary() in that case
+
 void wifi_write ()
 {
   unsigned char len;
@@ -132,6 +134,15 @@ void wifi_write ()
 
   wifly.send(&len, 1, DEFAULT_WAIT_RESPONSE_TIME);
   wifly.send(obuffer, DEFAULT_WAIT_RESPONSE_TIME);
+  wifly.flush();
+  delay(20);  // timeout by default of the RN-171 is 10ms, before it actually sends the TCP packet. a bit more is safer (15 gives yet some hickups)
+
+}
+
+void wifi_write_binary (unsigned char len)
+{
+  wifly.send(&len, 1, DEFAULT_WAIT_RESPONSE_TIME);
+  wifly.send((const uint8_t*)obuffer, len, DEFAULT_WAIT_RESPONSE_TIME);
   wifly.flush();
   delay(20);  // timeout by default of the RN-171 is 10ms, before it actually sends the TCP packet. a bit more is safer (15 gives yet some hickups)
 
@@ -209,7 +220,9 @@ void wifi_getTopAP (char sequence)
 }
 
 
-int wifi_FindBestAP (byte numAP)
+
+
+byte wifi_FindBestAP (byte numAP)
 {
   // renvoyer la sequence au serveur pour qu'il s'y retrouve
   byte i, j;

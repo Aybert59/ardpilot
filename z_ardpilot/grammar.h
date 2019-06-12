@@ -14,7 +14,6 @@
 
 
 
-
 // LED management
 #define LED_STATE    0x01
 
@@ -41,7 +40,8 @@
 #define C_SHTDN       0x16
 #define C_TOPWIFI     0x17 // top 10 des SSID WIFI
 #define C_LIDAR       0x18
-
+#define C_CALCMP      0x19  // compass callibration
+#define C_I2CSCAN     0x1a 
 
 #define C_COLOR       0xfe // not a control. Pass directly a color change for an object in the web interface
 
@@ -68,11 +68,8 @@
 // config parameters
 
 #define F_INIT        0xff
-#define F_AP1         0x01
-#define F_AP2         0x02
-#define F_AP3         0x03
-#define F_AP4         0x04
-#define F_AP5         0x05
+
+#define F_DEBUG       0x01
 
 #define F_SRV1        0x10
 #define F_PNGNUM      0x11
@@ -84,5 +81,19 @@
 #define F_DMIN        0x20
 #define F_AJUST       0x21
 #define F_ALIGN       0x22
+
+#define F_XMMIN       0x30
+#define F_XMMAX       0x31
+#define F_YMMIN       0x32
+#define F_YMMAX       0x33
+#define F_ZMMIN       0x34
+#define F_ZMMAX       0x35
+
+#define F_XAMIN       0x36
+#define F_XAMAX       0x37  
+#define F_YAMIN       0x38
+#define F_YAMAX       0x39
+#define F_ZAMIN       0x3a
+#define F_ZAMAX       0x3b
 
 // end of grammar

@@ -8,7 +8,7 @@
 
         <link rel="apple-touch-icon" href="Arduino_logo_pantone.png">
         <link href="nouislider.css" type="text/css" rel="stylesheet">
-        <link rel="stylesheet" type="text/css" href="index.css" />
+        <link rel="stylesheet" type="text/css" href="index.css?v3" />
         <link rel="stylesheet" type="text/css" href="highcharts.css" />
         
         <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
@@ -61,10 +61,10 @@
                         size: 200
                     }],
                     yAxis: [{
-                        min: 0, max: 15,
+                        min: 4, max: 9,
                         minorTickPosition: 'outside',
                         tickPosition: 'outside',
-                        tickInterval: 5,
+                        tickInterval: 1,
                         tickWidth: 0,
                         labels: {
                             rotation: 'auto',
@@ -74,11 +74,11 @@
                             color: '#F4FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        }, { from: 5.5, to: 9,
+                        }, { from: 5.5, to: 7.5,
                             color: '#82FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        },{ from: 9, to: 15,
+                        },{ from: 7.5, to: 15,
                             color: '#FA5858',
                             innerRadius: '100%',
                             outerRadius: '105%'
@@ -93,7 +93,7 @@
                     },
                     series: [{
                         name: 'Input Voltage',
-                        data: [0],
+                        data: [4],
                         yAxis: 0,
                         tooltip: {
                              valueSuffix: 'V'
@@ -279,41 +279,6 @@
                                         if($('#TextBox').length)
                                         $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
                                         })
-                                                     
-                socket.on('pongT', function(message) {
-                                        document.getElementById("Ping").style.background='LightGreen';
-                                        })
-                socket.on('pongF', function(message) {
-                                        document.getElementById("Ping").style.background='LightCoral';
-                                        })
-                                
-//                socket.on('wrefT', function(message) {
-//                                        document.getElementById("wifiref").style.background='LightGreen';
-//                                        })
-//                socket.on('wrefF', function(message) {
-//                                        document.getElementById("wifiref").style.background='LightCoral';
-//                                        })
-                
-//                socket.on('locT', function(message) {
-//                                        document.getElementById("locate").style.background='LightGreen';
-//                                        })
-//                socket.on('locF', function(message) {
-//                                        document.getElementById("locate").style.background='LightCoral';
-//                                        })
-                                
-                socket.on('scptT', function(message) {
-                                          document.getElementById("RunScript").style.background='LightGreen';
-                                          })
-                socket.on('scptF', function(message) {
-                                          document.getElementById("RunScript").style.background='LightCoral';
-                                          })
-                                
-                socket.on('TOPWT', function(message) {
-                                          document.getElementById("TopWifi").style.background='LightGreen';
-                                          })
-                socket.on('TOPWF', function(message) {
-                                          document.getElementById("TopWifi").style.background='LightCoral';
-                                          })
                                 
                 socket.on('axy', function(message) {
                                     var series = compas.get('cmp');
@@ -398,7 +363,7 @@
                     
                       document.getElementById(bouton).style.background=color;
                 })
-
+                                
                 Slider1.on('end', function( values, handle ) {
                                         socket.emit('servo1', values[handle] );
                                         });
@@ -412,7 +377,7 @@
                                         socket.emit('config', 'config');
                                         })
                                     
-
+                var annotH = [];
 
                 $('#ScanHorizon').click(function () {
                                         var series = charth.get('ligneh');
@@ -420,6 +385,10 @@
                                         socket.emit('scan', 'h');
                                         
                                         series.remove ();
+                                        for (var ann of annotH) {
+                                            charth.removeAnnotation (ann);
+                                        }
+                                        annotH = [];
                                         charth.addSeries ({
                                                 visible: false, showInLegend: false,
                                                 id: 'ligneh'
@@ -439,34 +408,14 @@
              // creation des dessins
                                 
                 charth = Highcharts.chart('charth', {
-                        chart: { type: 'scatter', zoomType: 'xy', animation: false, backgroundColor: '#DDEEFF',
-                            events: {
-                                click: function (event) {
-                                    
-                                    this.addAnnotation ({
-                                                xValue: event.xAxis[0].value,
-                                                yValue: event.yAxis[0].value,
-                                                title: {
-                                                    text: 'x: ' + Highcharts.numberFormat(event.xAxis[0].value, 0) +
-                                                        ', y: ' + Highcharts.numberFormat(event.yAxis[0].value, 0)
-                                                    }
-                                    })
-                                          
-                                    var annt = this.annotations.allItems[this.annotations.allItems.length -1];
-                                    setTimeout(function () {
-                                                     annt.destroy();
-                                            }, 2000);
-                                }
-                            }
-                        },
-                                          
+                        chart: { type: 'scatter', zoomType: 'xy', animation: false, backgroundColor: '#DDEEFF' },
                         title: { text: 'Horizon' },
                         
                         xAxis: {
-                            startOnTick: true, endOnTick: true, min: -200, max: 200, tickInterval: 50, showEmpty: true
+                            startOnTick: true, endOnTick: true, min: -350, max: 350, tickInterval: 50, showEmpty: true
                         },
                         yAxis: {
-                            startOnTick: true, endOnTick: true, min: 0, max: 200, tickInterval: 50, showEmpty: true,
+                            startOnTick: true, endOnTick: true, min: 0, max: 400, tickInterval: 50, showEmpty: true,
                             title: { text: '(cm)' }
                         },
                                           
@@ -502,20 +451,21 @@
                         }],
                                 
                 });
-                     
+
+                                
                 chartv = Highcharts.chart('chartv', {
                         chart: {
                             type: 'scatter', zoomType: 'xy', animation: false, backgroundColor: '#DDEEFF',
                         },
                         title: { text: 'Vertical' },
                         xAxis: {
-                            startOnTick: true, endOnTick: true, min: 0, max: 200, tickInterval: 50, showEmpty: true,
+                            startOnTick: true, endOnTick: true, min: 0, max: 300, tickInterval: 50, showEmpty: true,
                             title: {
                                 text: '(cm)',
                             }
                         },
                         yAxis: {
-                            startOnTick: true, endOnTick: true, min: -200, max: 200, tickInterval: 50, showEmpty: true,
+                            startOnTick: true, endOnTick: true, min: -100, max: 300, tickInterval: 50, showEmpty: true,
                         },
                         credits: { enabled: false },
                         plotOptions: {
@@ -581,11 +531,20 @@
                                      {
                                      data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
                                      visible: false, showInLegend: true,
-                                     id: 'ZonePresence', name: 'Zone Presence',
+                                     id: 'ZonePresence', name: 'Presence',
                                      marker: {
                                         enabled: true,
                                         symbol: 'circle',
                                         radius: 1
+                                     }},
+                                     {
+                                     data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
+                                     visible: false, showInLegend: true,
+                                     id: 'mapscan', name: 'Scan',
+                                     marker: {
+                                     enabled: true,
+                                     symbol: 'circle',
+                                     radius: 1
                                      }
                                      
                             }],
@@ -604,9 +563,34 @@
                                           
                     plan.redraw();
                 });
+                
+                socket.on('drawmapscan', function(message) {
+                                          
+                    var msg = message.trim();
+                    var delim = msg.indexOf(' ');
+                    var couleur = msg.slice (0, delim);
+                    var donnees = msg.slice (delim+1);
+                          
+                    alert ("couleur -" + couleur + "-");
+                          
+                    var dataset = donnees.split(' ');
+                    var series = plan.get('mapscan');
+                        
+                    series.setOptions ({color: couleur});
+                                          
+                    for (var i=0; i < dataset.length; i++)
+                    {
+                        cell = dataset[i].split(",").map(Number);
+                        series.addPoint (cell, false);
+                    }
+                                          
+                    plan.redraw();
+                });
                                 
                 socket.on('ClearPlan', function(message) {
                     var series = plan.get('ZonePresence');
+                    series.setData ([{x: 0, y:0}], true);
+                    series = plan.get('mapscan');
                     series.setData ([{x: 0, y:0}], true);
                 });
                     
@@ -647,6 +631,25 @@
                           series.show ();
                 });
                 
+                socket.on('drawline', function(message) {
+                        var plotArray = message.split (' ');
+                        var xs = parseInt(plotArray[1]);
+                        var ys = parseInt(plotArray[2]);
+                        var xe = parseInt(plotArray[3]);
+                        var ye = parseInt(plotArray[4]);
+                        
+                        var ann = charth.addAnnotation ({
+                            shapes: [{
+                                type: 'path',
+                                points: [{x: xs, y: ys, xAxis: 0, yAxis: 0},
+                                                  {x: xe, y: ye, xAxis: 0, yAxis: 0}],
+                                stroke: 'red'
+                            }]
+                        }, true);
+                          
+                        annotH.push (ann);
+                });
+                                
                 socket.on('plotv', function(message) {
                             var plotArray = message.split (' ');
                             var series = chartv.get('lignev');
@@ -764,7 +767,7 @@
                     onClick="do_cmd('LED')" title="Toggles LED"/> </td>
                 <td><div id="Servo1txt"><center>Servo1 </center></div> </td>
                 <td><div id="Servo2txt"><center>Servo2 </center></div> </td>
-                <td> <input type="button" value="Load Config" id="Config" /> </td>
+                
                 <td> <input type="button" value="Shutdown" id="Shtdn" style="background-color:#FC3020"
                     onClick="do_cmd_color(this,'SHTDN','SandyBrown')" title="shutdown robot and clean processes"/> </td>
             </tr>
@@ -778,9 +781,8 @@
                     onclick="do_cmd_colval (this,'SSCPT','ScriptName','SandyBrown')" title="Stop currently running script"/> </td>
                 <td> <div id="SliderSrv1"> </div> </td>
                 <td> <div id="SliderSrv2"> </div> </td>
-                <td> <input type=text id="LogFileName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Save logs to..." class="cleardefault"//> </td>
-                <td>  <input type="button" value="Debug Mode" id="DbgMode"
-                    onClick="do_cmd('DEBUG')" title="Toggles debug mode" style="background-color:SandyBrown"/> </td>
+                
+                
             </tr>
         </tbody>
     </table>
@@ -821,11 +823,11 @@
   <ul id="onglets">
         <li class="active"><a href="#1" rel="InOnglet1" onClick="loadit(this)">Scan</a></li>
         <li><a href="#2" rel="InOnglet2" onClick="loadit(this)">Plan </a></li>
-        <li><a href="#3" rel="InOnglet3" onClick="loadit(this)">TBD</a></li>
+        <li><a href="#3" rel="InOnglet3" onClick="loadit(this)">Settings</a></li>
   </ul>
 </div>
 
-<div id="commandes1" >
+
 
     <table id="TurnCmdTable" class="InOnglet1 InOnglet2">
         <thead>
@@ -922,17 +924,47 @@
         </tbody>
     </table>
 
-<div id="chartv" style="width:30%; height:500px;" class="InOnglet1"> </div>
+    <table id="ScanCmdTable" class="InOnglet1 InOnglet2">
+        <thead>
+        </thead>
+        
+        <tbody>
+            <tr>
+                <td> <input type="button" value="Horizon" id="ScanHorizon"/> </td>
+            </tr>
+            <tr>
+                <td> <input type="button" value="Vertical" id="ScanVertical"/> </td>
+            </tr>
+        </tbody>
+    </table>
 
-<div id="plan" style="width:25%; height:500px; display:none" class="InOnglet2" > </div>
 
-<input type="button" value="Horizon" id="ScanHorizon"  class="InOnglet1"/>
-<input type="button" value="Vertical" id="ScanVertical"  class="InOnglet1"/>
+<div id="chartv"  class="InOnglet1"> </div>
+
+<div id="plan" style="height:500px; width:30%; display:none" class="InOnglet2" > </div>
+
+<div id="charth"  class="InOnglet1 InOnglet2">  </div>
 
 
-<div id="charth" style="width:60%; height:300px;" class="InOnglet1">  </div>
+<table id="SettingsTable" style="display:none" class="InOnglet3">
+    <thead>
+    </thead>
+    
+    <tbody>
+        <tr>
+            <td> <input type="button" value="Load Config" id="Config" /> </td>
+            <td>  <input type="button" value="Debug Mode" id="DbgMode"
+                onClick="do_cmd('DEBUG')" title="Toggles debug mode" style="background-color:SandyBrown"/> </td>
+            <td>  <input type="button" value="Callibrate compass" id="CallibCompas"
+                onClick="do_cmd('CALCMP')" title="Toggles compass callibration mode" style="background-color:SandyBrown"/> </td>
+            <td>  <input type="button" value="i2c scan" id="i2cscan" onClick="do_cmd('I2CSCAN')" title="scans the I2C bus"/> </td>
+            <td> <input type=text id="LogFileName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Save logs to..." class="cleardefault"//> </td>
+        </tr>
 
-</div>
+    </tbody>
+</table>
+
+
 
 
 </body>

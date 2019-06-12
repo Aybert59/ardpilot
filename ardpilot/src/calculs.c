@@ -1,13 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 #include "ardpilot_grammar.h"
 #include "ardpilot.h"
 #define PIsur180 0.0174532925
 
-// from http://www.tangentex.com/RegLin.htm
+extern int DebugMode;
+extern struct cellule Appartement[APPT_L][APPT_W];
+extern float ApptDistances[APPT_L+BORDER*2][APPT_W+BORDER*2]; // appartment size + 1 meter all around
 
+// from http://www.tangentex.com/RegLin.htm
 void RegLineaire (double x[], double y[], int n, double *a, double *b)
 {
     int i;
@@ -107,9 +111,6 @@ void detectlines (double x[], double y[], double points[], int taille, int ecart
     // ecart : longeur minimale de segment à détecter (en nb de points)
     // precision : seuil de covariance maximale
     
-    // a noter recherche covariance proche de 1 ne marche pas bien
-    // utilisons covariance proche de zero
-    
     // a voir quels parametres on retourne, et comment...
     // pour le moment on les imprime
     
@@ -121,34 +122,48 @@ void detectlines (double x[], double y[], double points[], int taille, int ecart
     double angle;
     double mesure;
 
+    if (DebugMode == 1)
+        printf ("DetectLines on %d points, width %d, precision %0.4f\n",taille, ecart, precision);
+    draw_line (-10, 0, 10, 0); // bug ? le premier segment n'est pas dessiné ?
+    sleep(1);
     while (i+largeur < taille)
     {
-        c = fabsf (covariance (&(x[i]), &(y[i]), largeur));
-        if (c < precision)
+        
+        c = fabs (correlationPearson (&(x[i]), &(y[i]), largeur));
+        if (DebugMode == 1)
+            printf ("\tTesting i=%d (x: %0.2f y: %0.2f), getting correlation %0.4f\n",i,x[i],y[i], c);
+        if (c > precision)
         {
-            while ((c < precision) && ((i + largeur) < taille))
+            while ((c > precision) && ((i + largeur) < taille))
             {
                 largeur++;
-                c = fabsf (covariance (&(x[i]), &(y[i]), largeur));
+                c = fabsf (correlationPearson (&(x[i + largeur - ecart]), &(y[i+ largeur - ecart]), largeur));
             }
             largeur--;
-            c = fabsf (covariance (&(x[i]), &(y[i]), largeur));
+            c = fabs (correlationPearson (&(x[i]), &(y[i]), largeur));
             RegLineaire (&(x[i]), &(y[i]), largeur, &a, &b);
-            printf ("found segment (%f) starting at %d, angle width %d\n", c, i, largeur);
+            if (DebugMode == 1)
+                printf ("found segment (%f) starting at %d, angle width %d\n", c, i, largeur);
             med = i + largeur/2;
-            printf ("\ty = %f*x + %f - median angle %d\n",a,b,med);
-            printf ("\tFrom x=%.0f y=%.0f to x=%.0f y=%.0f\n",x[i],y[i],x[i+largeur],y[i+largeur]);
-
+            if (DebugMode == 1)
+            {
+                printf ("\ty = %f*x + %f - median angle %d\n",a,b,med);
+                printf ("\tFrom x=%.0f y=%.0f to x=%.0f y=%.0f\n",x[i],y[i],x[i+largeur],y[i+largeur]);
+            }
+            draw_line ((int) round(x[i]), (int) round(y[i]), (int) round(x[i+largeur]), (int) round(y[i+largeur]));
+            sleep(1);
             // affichage normalisé
             angle = - atan(a) / PIsur180; // angle à ajouter au cap actuel pour faire face au segment.
             mesure = calculelargeur (x[i], x[i+largeur], y[i], y[i+largeur]);
             
-            printf ("segment normalisé : \n");
-            printf ("\tangle median de detection : %d\n",med);
-            printf ("\tdistance point median : %.1f\n",points[med]);
-            printf ("\tlargeur de segment : %.1f\n",mesure);
-            printf ("\torientation par rapport cap robot (orthogonale) : %.0f\n",angle);
-            
+            if (DebugMode == 1)
+            {
+                printf ("segment normalisé : \n");
+                printf ("\tangle median de detection : %d\n",med);
+                printf ("\tdistance point median : %.1f\n",points[med]);
+                printf ("\tlargeur de segment : %.1f\n",mesure);
+                printf ("\torientation par rapport cap robot (orthogonale) : %.0f\n",angle);
+            }
             i += largeur;
             largeur = ecart;
         }
@@ -257,4 +272,94 @@ float distance_matrix (struct wifiref *CurrentWifi, struct wifiref *RefWifi)
     
     dist = sqrtf (somme);
     return (dist);
+}
+
+void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[])
+{
+    // points contains the detected distances left (0°) to right (180°)
+    // knowing that the robot heads to "orientation", calculate x & y coordinates north oriented
+    
+    int i;
+    int degre;
+    float angle;
+    
+    for (i=0; i<taille; i++)
+    {
+        degre = i + orientation;
+        if (degre >= 360)
+            degre -= 360;
+        angle = degre * PIsur180;
+        
+        xnorm[i] = - (points[i] * cos (angle));
+        ynorm[i] = points[i] * sin (angle);
+     }
+}
+
+double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy)
+{
+    // points have been oriented north
+    // checks only in the zone matching piece - FF checks the whole appartment
+    // returns position x, y and the match value (the lower the closer)
+    
+    int i, j;
+    int xd, yd, p;
+    double distance = 20000.0 * 180; /// max value for a whole scan
+    double value;
+//*** FILE *fd;
+
+    
+//*** fd = fopen ("/home/olivier/projets/ardpilot/debug_mapmatch.csv", "w");
+    
+    if (DebugMode == 1)
+        for (p=0; p<taille; p++)
+            printf ("point %.0f,%.0f\n", x[p], y[p]);
+    
+    for (i=0; i<APPT_L; i++)
+    {
+//        if (DebugMode == 1)
+//            printf ("testing line %d\n", i);
+        
+        for (j=0; j<APPT_W; j++)
+        {
+            if ((piece == 0xFF) || (piece == Appartement[i][j].piece))
+            {
+                // this is an appartment cell againts which we test the points pattern
+                // calculate the distance from a wall of each point
+                
+                value = 0;
+                for (p=0; p<taille; p++)
+                {
+                    xd = j + (int) round(x[p] / 10);  // attention les axes ne sont pas dans le meme sens
+                    yd = i - (int) round(y[p] / 10);
+                    
+                    if ((xd >= -BORDER) && (xd < APPT_W+BORDER) &&
+                            (yd >= -BORDER) && (yd < APPT_L+BORDER))
+                    {
+                        // point is within the appt_distance range
+                        //value += ((ApptDistances[xd + BORDER][yd + BORDER]) * (ApptDistances[xd + BORDER][yd + BORDER]));
+                        value += ((ApptDistances[yd + BORDER][xd + BORDER]) * (ApptDistances[yd + BORDER][xd + BORDER]));
+                    }
+                    else
+                        value += 20000.0;
+                }
+            
+            
+//            if (DebugMode == 1)
+//                printf ("Found %.0f at %d,%d\n", value,i,j);
+            
+                if (value < distance)
+                {
+                    distance = value;
+                
+                    *posx = j;
+                    *posy = i;
+                }
+            }
+//*** fprintf (fd, "%.0f ", value);
+        }
+//*** fprintf (fd, "\n");
+    }
+//*** fclose (fd);
+    return (sqrt(distance));
+
 }
