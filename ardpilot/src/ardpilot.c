@@ -100,7 +100,6 @@ void log_message (char action, char *message)
     // add a \n
     sprintf (data, "LOG%c%s\n", action, message);
     control_message (action, data);
-
 }
 
 void
