@@ -1,0 +1,290 @@
+# matrices de WIFI référence
+#
+# chaque matrice contient une mesure de référence des 10 hotspots les plus visibles
+# mesurées dans chacune des 4 directions cardinales 
+#
+# pour la zone dans le plan cf le plan excel et le format dans read_config.c
+#
+# Maximum 64 matrices
+#
+###################################################################################
+
+
+
+#
+Matrix 0
+Zone C0
+Name ChambrePZoneBureau
+Releves 1
+ssid 0 0 44 Livebox-d9b9
+ssid 0 1 46 Livebox-94C0
+ssid 0 2 49 FreeWifi_secure
+ssid 0 3 49 
+ssid 0 4 49 FreeWifi
+ssid 0 5 63 Livebox-94C0
+ssid 0 6 69 Sanglier
+ssid 0 7 99 
+ssid 0 8 99 
+ssid 0 9 99 
+ssid 1 0 42 Livebox-94C0
+ssid 1 1 47 Livebox-d9b9
+ssid 1 2 48 
+ssid 1 3 49 FreeWifi
+ssid 1 4 49 FreeWifi_secure
+ssid 1 5 60 Sanglier
+ssid 1 6 65 Livebox-55D3
+ssid 1 7 66 DIRECT-GuC48x
+ssid 1 8 66 DIRECT-GuC48x
+ssid 1 9 66 orange
+ssid 2 0 39 Livebox-d9b9
+ssid 2 1 48 Livebox-94C0
+ssid 2 2 50 FreeWifi
+ssid 2 3 50 FreeWifi_secure
+ssid 2 4 50 
+ssid 2 5 69 Sanglier
+ssid 2 6 99 
+ssid 2 7 99 
+ssid 2 8 99 
+ssid 2 9 99 
+ssid 3 0 40 Livebox-d9b9
+ssid 3 1 50 Livebox-94C0
+ssid 3 2 51 FreeWifi
+ssid 3 3 51 FreeWifi_secure
+ssid 3 4 51 
+ssid 3 5 65 Sanglier
+ssid 3 6 66 Livebox-55D3
+ssid 3 7 68 orange
+ssid 3 8 69 Livebox-94C0
+ssid 3 9 72 Pomme.de.Pain.WiFi
+
+# A refaire depuis changement tplink
+Matrix 1
+Zone C3
+Name ChambrePZonePlacard
+Releves 2
+ssid 0 0 46 Livebox-d9b9
+ssid 0 1 44 TP-LINK_9692C8
+ssid 0 2 45 FreeWifi
+ssid 0 3 45 FreeWifi_secure
+ssid 0 4 45 
+ssid 0 5 59 DIRECT-GuC48x Series
+ssid 0 6 59 DIRECT-GuC48x Series
+ssid 0 7 66 Sanglier
+ssid 0 8 67 Livebox-55D3
+ssid 0 9 64 Livebox-94C0
+ssid 1 0 41 TP-LINK_9692C8
+ssid 1 1 44 Livebox-d9b9
+ssid 1 2 48 FreeWifi
+ssid 1 3 48 FreeWifi_secure
+ssid 1 4 49 
+ssid 1 5 56 DIRECT-GuC48x Series
+ssid 1 6 56 DIRECT-GuC48x Series
+ssid 1 7 66 Sanglier
+ssid 1 8 59 Livebox-94C0
+ssid 1 9 70 Livebox-935E
+ssid 2 0 42 FreeWifi_secure
+ssid 2 1 42 FreeWifi
+ssid 2 2 43 Livebox-d9b9
+ssid 2 3 43 
+ssid 2 4 48 TP-LINK_9692C8
+ssid 2 5 65 Sanglier
+ssid 2 6 63 DIRECT-GuC48x Series
+ssid 2 7 63 DIRECT-GuC48x Series
+ssid 2 8 64 Livebox-94C0
+ssid 2 9 66 nguyenWIFI_EXT
+ssid 3 0 41 TP-LINK_9692C8
+ssid 3 1 44 FreeWifi
+ssid 3 2 44 FreeWifi_secure
+ssid 3 3 42 
+ssid 3 4 45 Livebox-d9b9
+ssid 3 5 71 orange
+ssid 3 6 82 Livebox-94C0
+ssid 3 7 99 
+ssid 3 8 99 
+ssid 3 9 99 
+
+# # A refaire depuis changement tplink
+Matrix 2
+Zone 41
+Name CouloirZoneArmoireDanse
+Releves 2
+ssid 0 0 46 Livebox-d9b9
+ssid 0 1 71 FreeWifi_secure
+ssid 0 2 72 FreeWifi
+ssid 0 3 72 
+ssid 0 4 74 TP-LINK_9692C8
+ssid 0 5 60 DIRECT-GuC48x
+ssid 0 6 81 DIRECT-GuC48x
+ssid 0 7 81 orange
+ssid 0 8 66 Livebox-55D3
+ssid 0 9 85 
+ssid 1 0 41 Livebox-d9b9
+ssid 1 1 43 FreeWifi
+ssid 1 2 72 
+ssid 1 3 43 FreeWifi_secure
+ssid 1 4 78 TP-LINK_9692C8
+ssid 1 5 79 AndroidLF
+ssid 1 6 65 Sanglier
+ssid 1 7 54 DIRECT-GuC48x
+ssid 1 8 82 DIRECT-GuC48x
+ssid 1 9 59 Livebox-94C0
+ssid 2 0 44 Livebox-d9b9
+ssid 2 1 71 
+ssid 2 2 42 FreeWifi
+ssid 2 3 42 FreeWifi_secure
+ssid 2 4 73 TP-LINK_9692C8
+ssid 2 5 84 Sanglier
+ssid 2 6 85 AndroidLF
+ssid 2 7 85 StargateBB
+ssid 2 8 53 Livebox-94C0
+ssid 2 9 77 dlink-AF06
+ssid 3 0 45 Livebox-d9b9
+ssid 3 1 43 FreeWifi
+ssid 3 2 43 FreeWifi_secure
+ssid 3 3 72 
+ssid 3 4 79 AndroidLF
+ssid 3 5 83 TP-LINK_9692C8
+ssid 3 6 84 Sanglier
+ssid 3 7 67 Livebox-55D3
+ssid 3 8 58 Livebox-94C0
+ssid 3 9 68 orange
+
+## A refaire depuis changement tplink
+
+Matrix 3
+Zone 90
+Name SalleDeBainsP
+Releves 1
+ssid 0 0 49 Livebox-94C0
+ssid 0 1 49 TP-LINK_9692C8
+ssid 0 2 50 Livebox-d9b9
+ssid 0 3 50 FreeWifi
+ssid 0 4 50 FreeWifi_secure
+ssid 0 5 51 
+ssid 0 6 58 DIRECT-GuC48x
+ssid 0 7 58 DIRECT-GuC48x
+ssid 0 8 71 Livebox-55D3
+ssid 0 9 99 
+ssid 1 0 48 Livebox-d9b9
+ssid 1 1 48 TP-LINK_9692C8
+ssid 1 2 51 FreeWifi_secure
+ssid 1 3 51 FreeWifi
+ssid 1 4 51 
+ssid 1 5 55 Livebox-94C0
+ssid 1 6 57 DIRECT-GuC48x
+ssid 1 7 57 DIRECT-GuC48x
+ssid 1 8 66 Livebox-55D3
+ssid 1 9 66 orange
+ssid 2 0 41 TP-LINK_9692C8
+ssid 2 1 48 Livebox-94C0
+ssid 2 2 49 Livebox-d9b9
+ssid 2 3 54 FreeWifi_secure
+ssid 2 4 54 FreeWifi
+ssid 2 5 54 
+ssid 2 6 64 DIRECT-GuC48x
+ssid 2 7 64 DIRECT-GuC48x
+ssid 2 8 67 orange
+ssid 2 9 68 Livebox-55D3
+ssid 3 0 44 FreeWifi
+ssid 3 1 44 FreeWifi_secure
+ssid 3 2 44 
+ssid 3 3 45 TP-LINK_9692C8
+ssid 3 4 46 Livebox-d9b9
+ssid 3 5 57 DIRECT-GuC48x
+ssid 3 6 57 DIRECT-GuC48x
+ssid 3 7 58 Livebox-94C0
+ssid 3 8 70 Sanglier
+ssid 3 9 74 Livebox-55D3
+
+#
+Matrix 4
+Zone B0
+Name ChambreChloe
+Releves 1
+ssid 0 0 41 Livebox-d9b9
+ssid 0 1 46 Livebox-94C0
+ssid 0 2 50 
+ssid 0 3 50 FreeWifi
+ssid 0 4 50 FreeWifi_secure
+ssid 0 5 63 Sanglier
+ssid 0 6 64 Freebox-53B7E4
+ssid 0 7 65 FreeWifi_secure
+ssid 0 8 66 FreeWifi
+ssid 0 9 66 orange
+ssid 1 0 43 Livebox-94C0
+ssid 1 1 48 Livebox-d9b9
+ssid 1 2 51 FreeWifi
+ssid 1 3 51 FreeWifi_secure
+ssid 1 4 51 
+ssid 1 5 53 Sanglier
+ssid 1 6 59 FreeWifi
+ssid 1 7 60 Freebox-53B7E4
+ssid 1 8 61 FreeWifi_secure
+ssid 1 9 62 DIRECT-GuC48x
+ssid 2 0 41 Livebox-94C0
+ssid 2 1 43 Livebox-d9b9
+ssid 2 2 52 FreeWifi_secure
+ssid 2 3 53 
+ssid 2 4 53 FreeWifi
+ssid 2 5 59 DIRECT-GuC48x
+ssid 2 6 59 DIRECT-GuC48x
+ssid 2 7 59 Sanglier
+ssid 2 8 60 Livebox-94C0
+ssid 2 9 65 orange
+ssid 3 0 42 Livebox-94C0
+ssid 3 1 44 Livebox-d9b9
+ssid 3 2 52 FreeWifi
+ssid 3 3 52 FreeWifi_secure
+ssid 3 4 52 
+ssid 3 5 60 DIRECT-GuC48x
+ssid 3 6 60 DIRECT-GuC48x
+ssid 3 7 62 Freebox-53B7E4
+ssid 3 8 63 FreeWifi
+ssid 3 9 63 Livebox-55D3
+
+#
+Matrix 5
+Zone D1
+Name ChambreLeaFenetre
+Releves 1
+ssid 0 0 46 Livebox-d9b9
+ssid 0 1 47 Livebox-94C0
+ssid 0 2 51 FreeWifi_secure
+ssid 0 3 51 FreeWifi
+ssid 0 4 52 
+ssid 0 5 67 Livebox-94C0
+ssid 0 6 68 DIRECT-GuC48x
+ssid 0 7 68 DIRECT-GuC48x
+ssid 0 8 75 Sanglier
+ssid 0 9 99 
+ssid 1 0 37 Livebox-d9b9
+ssid 1 1 51 FreeWifi_secure
+ssid 1 2 51 Livebox-94C0
+ssid 1 3 55 FreeWifi
+ssid 1 4 55 
+ssid 1 5 99 
+ssid 1 6 99 
+ssid 1 7 99 
+ssid 1 8 99 
+ssid 1 9 99 
+ssid 2 0 43 Livebox-d9b9
+ssid 2 1 50 Livebox-94C0
+ssid 2 2 55 FreeWifi_secure
+ssid 2 3 55 
+ssid 2 4 56 FreeWifi
+ssid 2 5 99 
+ssid 2 6 99 
+ssid 2 7 99 
+ssid 2 8 99 
+ssid 2 9 99 
+ssid 3 0 45 Livebox-d9b9
+ssid 3 1 48 FreeWifi_secure
+ssid 3 2 51 Livebox-94C0
+ssid 3 3 53 FreeWifi
+ssid 3 4 54 
+ssid 3 5 67 Livebox-55D3
+ssid 3 6 68 orange
+ssid 3 7 71 Livebox-94C0
+ssid 3 8 99 
+ssid 3 9 99 
+

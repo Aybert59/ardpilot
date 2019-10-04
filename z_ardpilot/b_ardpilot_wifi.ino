@@ -104,7 +104,7 @@ void wifi_display_IP () // and complete some setup
   
   obuffer[0] = C_LOG;
   strcpy (&(obuffer[1]), "IP 192.168.1.");
-  itoa (i,&(obuffer[15]),10);
+  itoa (i,&(obuffer[14]),10);
   wifi_write();
   
 }

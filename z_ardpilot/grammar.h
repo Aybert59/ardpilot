@@ -4,9 +4,9 @@
 
 // message level device
 
-#define MSG_INFO    1
-#define MSG_WARNING 2
-#define MSG_ERROR   3
+#define MSG_INFO    '1'
+#define MSG_WARNING '2'
+#define MSG_ERROR   '3'
 
 // actions for Arduino
 

@@ -74,8 +74,15 @@ void read_compas_correction()
     // initialisation
     for (i=0; i<360; i++)
     {
-        compas_correction[i] = i;
+        compas_correction[i] = i - 10;   // reorientation of the appartment to the north
+        if (compas_correction[i] < 0)
+            compas_correction[i] += 360;
+        cap_correction[i] = i + 10;
+        if (cap_correction[i] > 359)
+            cap_correction[i] -= 360;
     }
+    
+    return; // with BNO055 no need for correction anymore
     
     strcpy (filename, CONFDIR);
     strcat (filename, "/");
@@ -585,11 +592,9 @@ FILE *open_wifi_matrix_file (int MatRef)
         
         if (MatRef == -1) // request to create a new Matrix
         {
-            matrixNumber = lines + 1;
-        
             fprintf (fd, "\n");
             fprintf (fd, "# insert any comment here\n");
-            fprintf (fd, "Matrix %d\n", matrixNumber);
+            fprintf (fd, "Matrix %d\n", lines);
             fprintf (fd, "Zone ##\n");
             fprintf (fd, "Name xxxx\n");
             fprintf (fd, "Releves 1\n");

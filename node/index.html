@@ -57,11 +57,11 @@
                                         borderWidth: 0,
                                         outerRadius: '109%'
                                         }],
-                        center: ['50%', '160%'],
+                        center: ['50%', '170%'],
                         size: 200
                     }],
                     yAxis: [{
-                        min: 4, max: 9,
+                        min: 4, max: 7.5,
                         minorTickPosition: 'outside',
                         tickPosition: 'outside',
                         tickInterval: 1,
@@ -70,15 +70,15 @@
                             rotation: 'auto',
                             distance: 15
                         },
-                        plotBands: [{ from: 0, to: 5.5,
+                        plotBands: [{ from: 4, to: 5.5,
                             color: '#F4FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        }, { from: 5.5, to: 7.5,
+                        }, { from: 5.5, to: 6.62,
                             color: '#82FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        },{ from: 7.5, to: 15,
+                        },{ from: 6.62, to: 8,
                             color: '#FA5858',
                             innerRadius: '100%',
                             outerRadius: '105%'
@@ -127,7 +127,7 @@
                                                                               borderWidth: 0,
                                                                               outerRadius: '109%'
                                                                               }],
-                                                                 center: ['50%', '160%'],
+                                                                 center: ['50%', '170%'],
                                                                  size: 200
                         }],
                         yAxis: [{
@@ -270,15 +270,28 @@
                 // note : in Javascript a variable not declared has a global scope
                                 
                 socket = io.connect('http://192.168.1.3:8080');
-
+                                
+                socket.on('log', function(data) {
+                        var importance = data.importance;
+                        var message = data.texte;
+                          
+                        // si message error mettre un popup alert
+                          
+                        if (message.length > 1) {       // la couleur ne marche pas dans un textarea. Changer d'objet
+                            $('#TextBox').append(importance);
+                            $('#TextBox').append('-');
+                            $('#TextBox').append(message+'\n');
+                        }
+                        if($('#TextBox').length)
+                            $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
+                        })
                                 
                 socket.on('message', function(message) {
-                          if (message.length > 1) {       // parfois il reçoit juste un saut de ligne : pourquoi ?
-                                            $('#TextBox').append(message);
-                                        }
-                                        if($('#TextBox').length)
-                                        $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
-                                        })
+                          
+                          $('#TextBox').append(message+'\n');
+                          if($('#TextBox').length)
+                                    $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
+                          })
                                 
                 socket.on('axy', function(message) {
                                     var series = compas.get('cmp');
@@ -352,8 +365,8 @@
                           })
                           
                 socket.on('color', function(message) {
-                      var l = message.length -1;
-                      var bouton = message.toString().substring(1,l);
+
+                      var bouton = message.toString().substring(1,message.length);
                       
                       if (message.charAt(0) == 'T') {
                         color='LightGreen';
@@ -362,6 +375,19 @@
                       }
                     
                       document.getElementById(bouton).style.background=color;
+                          
+                      if (bouton == "locate") {
+                        if (message.charAt(0) == 'T') {
+                          var rep = confirm("Is localization correct ?\nIf not, press Cancel and then\nthe correct location in the plan");
+                          if(rep == true)
+                          {
+                            do_cmd('LOC_OK');
+                          }
+                          else{
+                            do_cmd('LOC_NOK');
+                          }
+                        }
+                      }
                 })
                                 
                 Slider1.on('end', function( values, handle ) {
@@ -682,10 +708,14 @@
                 });
             })
             
+            function reset_comm () {
+                socket.emit('rstcom','rstcom');
+            }
+        
             function do_cmd (commande) {
                 socket.emit('cmd', commande);
             }
-        
+
             function do_cmd_color (obj, commande, couleur) {
                 obj.style.background = couleur;
                 socket.emit('cmd', commande);
@@ -813,7 +843,7 @@
                     onClick="do_cmd_color(this, 'LOCT','SandyBrown')" title='Locate among WIFI matrices' id="locate" /> </td>
             </tr>
             <tr>
-                <td> <div id="ArdVoltMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
+                <td > <div id="ArdVoltMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
                 <td colspan=2> <div id="ArdMemMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
             </tr>
         </tbody>
@@ -959,6 +989,9 @@
                 onClick="do_cmd('CALCMP')" title="Toggles compass callibration mode" style="background-color:SandyBrown"/> </td>
             <td>  <input type="button" value="i2c scan" id="i2cscan" onClick="do_cmd('I2CSCAN')" title="scans the I2C bus"/> </td>
             <td> <input type=text id="LogFileName" rows="1" style="font-style: italic; color:#a0a0a0"  value="Save logs to..." class="cleardefault"//> </td>
+        </tr>
+        <tr>
+            <td colspan="2"> <input type="button" value="Reset Comm." id="RstComm" onClick="reset_comm()" title="Reset communication between all components when stuck"/> </td>
         </tr>
 
     </tbody>

@@ -45,11 +45,9 @@ const int Lidar_address = 0x62;
 // #define BNO055_ADDRESS 0x29
 // adresse écran 3C
 
-const int LED = 13;
+const int LED = 8;
 
 const int TRIG_U = 2;   // capteur ultrason
-const int ENABLE_L = 3; // capteur lidar
-const int ECHO_L = 4;   // capteur lidar
 const int ECHO_U = 5;   // capteur ultrason
 
 NewPing SonarAV (TRIG_U, ECHO_U);
@@ -169,11 +167,11 @@ void setup() {
   pinMode (LED, OUTPUT);
   
   pinMode (TRIG_U, OUTPUT);
-  pinMode (ENABLE_L, OUTPUT);
-  pinMode (ECHO_L, INPUT);
+//  pinMode (ENABLE_L, OUTPUT);
+//  pinMode (ECHO_L, INPUT);
   pinMode (ECHO_U, INPUT);
   digitalWrite (TRIG_U, LOW);
-  digitalWrite (ENABLE_L, LOW); // low : use the i2c
+//  digitalWrite (ENABLE_L, LOW); // low : use the i2c
 
   Wire.begin();
   begin_ecran ();
@@ -213,7 +211,7 @@ void terminate_setup () {
   ServoRight.writeMicroseconds(1500);
   
   servo1.attach(11);
-  servo2.attach(9);
+  servo2.attach(13);
 
 
   callibrate_dist_sensors ();

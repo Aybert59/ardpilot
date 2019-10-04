@@ -191,7 +191,7 @@ void draw_matched_scan (double x[], double y[], int taille, int posx, int posy)
     }
 }
 
-void display_room_from_matrix (unsigned int zone)
+void display_room_from_matrix (unsigned int zone, char *color)
 {
     char message[1024];
     char temp[10];
@@ -203,7 +203,7 @@ void display_room_from_matrix (unsigned int zone)
     printf ("drawing zone %2X\n",zone);
     for (i=0;i<193;i++)
     {
-        strcpy (message,"DRAWCOLOR Aquamarine  ");
+        sprintf (message,"DRAWCOLOR %s  ", color);
         for (j=0;j<93;j++)
         {
             if (Appartement[i * 93 + j].piece == zone)

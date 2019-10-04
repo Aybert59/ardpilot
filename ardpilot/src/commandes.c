@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <poll.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -196,8 +197,7 @@ int bloc_get_compas ()
     while (buffer[0] != C_CMP)
     {
         n = read(ardfd, &len, 1);
-        if (n > 0)
-        {
+        if (n > 0) {
             for (j=0; j<len; j++)
                 read (ardfd, &(buffer[j]), 1);
             buffer[j] = '\0';
@@ -208,6 +208,9 @@ int bloc_get_compas ()
             } else {
                 interpret_ard (buffer, 1);
             }
+        } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+            printf ("Read timeout, resending\n");
+            check_compas (sequence);
         }
     }
     

@@ -7,11 +7,10 @@
 #include <MemoryFree.h>
 
 // addresses for the magneto/accel/gyro 
-#define BNO055_ADDRESS 0x28
+#define CMPS12_ADDRESS 0x60
 
 
-
-// docs et refs du compas https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/downloads 
+// docs et refs du compas https://robot-electronics.co.uk/files/cmps12.pdf and https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/downloads 
 
 void I2Cscan()
 {
@@ -327,111 +326,70 @@ return;
 
 void initialize_bno055() {
   uint8_t unitsel;
-return;
 
-  // Set normal power mode
-  I2CwriteByte (BNO055_ADDRESS,0x3e,0x00);
-  delay(10);
+//this procedure for real BNO055. Not used for CMPS12
 
-  // select register data units
-  unitsel = (0 << 7) | // Orientation = Android
-                    (0 << 4) | // Temperature = Celsius
-                    (0 << 2) | // Euler = Degrees
-                    (1 << 1) | // Gyro = Rads
-                    (0 << 0);  // Accelerometer = m/s^2
-  I2CwriteByte (BNO055_ADDRESS, 0x3b, unitsel);
-  delay(10);
+// nevertheless should turn 360° to initialize compass
 
-  // remap the axes
-  I2CwriteByte (BNO055_ADDRESS,0x41,0x06);
-  delay(10);
-  I2CwriteByte (BNO055_ADDRESS,0x42,0x07);
-  delay (10);
+return(0);
 
-  // Set operation mode (full fusion)
-  I2CwriteByte (BNO055_ADDRESS,0x3d,0x0c);
-  delay(10);
-  
-  ecran.clear();
-  ecran.setPowerSave(0);
-  ecran.print("Setup OK\n");
-  delay(2000);
+
 }
 
+
+int get_compas (char *outstr, int outlen) {
+  int8_t temp_high=0, temp_low=0, head_high=0, head_low=0, pitch=0, roll=0;
+  int16_t angle16=0, temp=0;
+  int i;
   
-/*
-int get_compas (bool callibration) {
-  int x,y,z; //triple axis data
-  double angle;
-
-  Wire.beginTransmission(Compass_address); //open communication with HMC5883 compass
-  Wire.write(0x02); //select mode register
-  Wire.write(0x00); //continuous measurement mode
-  Wire.endTransmission();
-
-  delay(20);
-
-  //Tell the HMC5883 where to begin reading data
-  Wire.beginTransmission(Compass_address);
-  Wire.write(0x03); //select register 3, X MSB register
-  Wire.endTransmission();
-  
- 
-  //Read data from each axis, 2 registers per axis
-  Wire.requestFrom(Compass_address, 6); 
-  if(6<=Wire.available()){
-     x = Wire.read()<<8; //X msb
-     x |= Wire.read(); //X lsb
-     z = Wire.read()<<8; //Z msb
-     z |= Wire.read(); //Z lsb
-     y = Wire.read()<<8; //Y msb
-     y |= Wire.read(); //Y lsb
-  }
-
-  if (callibration == false)
-  {
-    angle = atan2((double)y,(double)x) * 57.2957796 + 180.0;
-    return ((int) angle);
-  } else {
-    if (x < xmmin) xmmin = x;
-    if (x > xmmax) xmmax = x;
-    if (y < ymmin) ymmin = y;
-    if (y > ymmax) ymmax = y;
-    if (z < zmmin) zmmin = z;
-    if (z > zmmax) zmmax = z;
-    delay(50);
-    return 0;
-  }
-}
-*/
-
-int get_compas (bool callibration) {
-  int8_t temp;
-  uint8_t euler[6];
-  int16_t heading=0, pitch=0, roll=0;
-return (0);
 //debug
-  ecran.clear();
-  ecran.setPowerSave(0);
-  ecran.print("BNO 055\n");
+//  ecran.clear();
+//  ecran.setPowerSave(0);
+//  ecran.print("CMPS12\n");
   
-  I2Cread (BNO055_ADDRESS, 0x34, 1, &temp);
-  I2Cread (BNO055_ADDRESS, 0x1a, 6, euler);
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(2);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  // Request 4 bytes from the CMPS12
+  // this will give us both bytes of the 16 bit bearing, pitch and roll
+  Wire.requestFrom(CMPS12_ADDRESS, 4);       
+  
+  while(Wire.available() < 4);        // Wait for all bytes to come back
+  
+  head_high = Wire.read();
+  head_low = Wire.read();
+  pitch = Wire.read();
+  roll = Wire.read();
+  
+  angle16 = head_high;                 // Calculate 16 bit angle
+  angle16 <<= 8;
+  angle16 += head_low;
 
-  heading = (((uint16_t)euler[1]) << 8) | ((uint16_t)euler[0]);
-  roll = (((uint16_t)euler[3]) << 8) | ((uint16_t)euler[2]);
-  pitch = (((uint16_t)euler[5]) << 8) | ((uint16_t)euler[4]);
-
-
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(0x18);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  Wire.requestFrom(CMPS12_ADDRESS, 2);       
+  
+  while(Wire.available() < 2);        // Wait for all bytes to come back
+  
+  temp_high = Wire.read();
+  temp_low = Wire.read();
+   
+  temp = temp_high;                 // Calculate 16 bit angle
+  temp <<= 8;
+  temp += temp_low;
+  
 // afficher les valeurs sur l'écran
-
+/*
   ecran.clear();
   ecran.setPowerSave(0);
   
   ecran.setCursor(0, 1);
   ecran.print("head");
   ecran.setCursor(6, 1);
-  ecran.print(heading);
+  ecran.print(angle16/10);
   
   ecran.setCursor(0, 2);
   ecran.print("roll");
@@ -447,14 +405,49 @@ return (0);
   ecran.print("temp");
   ecran.setCursor(6,5);
   ecran.print(temp);
-    
-  return (heading);
+*/
+  if (outstr != NULL)
+  {
+      i=0;
+      while (outstr[i] != '\0')
+        i++;
+      if (i < (outlen - 8))
+      {
+        outstr[i++] = ' ';
+        itoa ((int)(angle16/10), &(outstr[i]), 10);
+      }
+      
+      while (outstr[i] != '\0')
+        i++;
+      if (i < (outlen - 8))
+      {
+        outstr[i++] = ' ';
+        itoa (roll, &(outstr[i]), 10);
+      }
+
+      while (outstr[i] != '\0')
+        i++;
+      if (i < (outlen - 8))
+      {
+        outstr[i++] = ' ';
+        itoa (pitch, &(outstr[i]), 10);
+      }
+
+      while (outstr[i] != '\0')
+        i++;
+      if (i < (outlen - 8))
+      {
+        outstr[i++] = ' ';
+        itoa (temp, &(outstr[i]), 10);
+      }
+  }
+  return (angle16/10);
 }
 
 void get_angle(char sequence) {
   int a;
   
-  a = get_compas (false);
+  a = get_compas (NULL, 0);
   obuffer[0] = C_CMP;
   obuffer[1] = sequence;
   itoa (a, &(obuffer[2]), 10);
@@ -565,6 +558,7 @@ int get_lidar_val_i2c_2 (byte *s)
   return val;
 
 }
+/*
 unsigned long get_lidar_val_pwm ()
 {
   unsigned long val = 0;
@@ -591,7 +585,8 @@ unsigned long get_lidar_val_pwm ()
 
   return val;
 }
-
+*/
+/*
 void get_lidar(char sequence) {
   int a;
   byte s = 255;
@@ -618,7 +613,7 @@ void get_lidar(char sequence) {
 
 //  wifi_write();
 }
-
+*/
 
 // variables created by the build process when compiling the sketch
 
@@ -644,6 +639,7 @@ void memoryFree(unsigned char sequence)
   obuffer[1] = sequence;
   itoa (freeValue, &(obuffer[2]), 10);
 
+  delay (200);   // don't be too fast, the WIFI interface cannot handle
   wifi_write ();
 }
 

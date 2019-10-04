@@ -60,6 +60,29 @@ void check_free_mem (unsigned char sequence)
     write_ard (ardfd, message);
 }
 
+void block_check_free_mem (unsigned char sequence)
+{
+    char message[4];
+    extern int ardfd;
+    extern int DebugMode;
+    char buffer[64];
+    int n;
+    
+    ard_block_mode ();
+    check_free_mem (sequence);
+    
+    buffer[0] = '\0';
+    while (buffer[0] != C_MEM)
+    {
+        n = read(ardfd, buffer, 64);
+        if (n > 0)
+        {
+            interpret_ard (buffer, DebugMode);
+        }
+    }
+    ard_async_mode ();
+}
+
 void check_compas (unsigned char sequence)
 {
     char message[4];
@@ -83,13 +106,16 @@ void check_voltage ()
 
 int get_health ()
 {
-    int n;
+    int n; // une fois que le ping récupère tout, juste envoyer un ping.
     // récupérer adresse IP
     
     // récuperer free mem
-    check_free_mem ('*');
-    pause (); // wait for result to be received and managed
     
+    check_free_mem ('*');
+    pause();
+    
+    // ne mache pas : block_check_free_mem ('*');
+ 
     sleep (1);
     // récupérer vitesse des moteurs
     
@@ -269,7 +295,8 @@ int locate_myself ()
     extern int ardfd;
     char buffer[64];
     unsigned char len;
-
+    extern int DebugMode;
+    
     NoInterrupt = 1;
 
     
@@ -336,15 +363,18 @@ int locate_myself ()
 
     // step 1bis verify
     
-    printf ("current wifi environment :\n");
-    for (i=0; i<4; i++)
+    if (DebugMode == 1)
     {
-        for (j=0; j< 10; j++)
+        printf ("current wifi environment :\n");
+        for (i=0; i<4; i++)
         {
-            printf ("ssid %d %d %d %s\n", i, j, CurrentWifi.ssid[i][j].val, CurrentWifi.ssid[i][j].label);
+            for (j=0; j< 10; j++)
+            {
+                printf ("ssid %d %d %d %s\n", i, j, CurrentWifi.ssid[i][j].val, CurrentWifi.ssid[i][j].label);
+            }
         }
+        printf ("\n");
     }
-    printf ("\n");
 
     // step 2 find closest match in global matrices table
     
@@ -353,19 +383,43 @@ int locate_myself ()
     for (i=0; i<MaxMatrices; i++)
     {
         d = distance_matrix (&CurrentWifi, &(WifiMatrix[i]));
+        WifiMatrix[i].distance = d;
         if (d < dmin)
         {
             dmin = d;
             rang = i;
         }
-        // debug
-        printf ("Distance with matrix %d : %f\n",i,d);
+        
+        if (DebugMode == 1)
+        {
+            printf ("Distance with matrix %d : %f\n",i,d);
+        }
     }
     
     // step 3 display results
     
-    printf ("*** Closest matrix is %d ***\n\n",rang);
-    display_room_from_matrix (WifiMatrix[rang].zone);
+    if (DebugMode == 1)
+    {
+        printf ("*** Closest matrix is %d ***\n\n",rang);
+    }
+    display_room_from_matrix (WifiMatrix[rang].zone, "Aquamarine");
+    
+    for (i=0; i<MaxMatrices; i++)
+    {
+        if (WifiMatrix[i].distance / dmin < 1.05)  // let's display matrices where distance is close by less than 5%
+        {
+            if (DebugMode == 1)
+            {
+                printf ("* Near matrix found %d *\n",i);
+            }
+            display_room_from_matrix (WifiMatrix[i].zone, "BurlyWood");
+        }
+    }
     
     return codeRet; // 1 = ok, 0 = pb de positionnement
+}
+
+void average_and_save_wifi (int x, int y)
+{
+    printf ("real location %d %d\n",x,y);
 }

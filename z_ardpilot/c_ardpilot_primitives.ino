@@ -33,7 +33,7 @@ long cap, delta;
 static long previousDelta = 999;
 
   // determine which way to turn
-  cap = (long) get_compas (false);
+  cap = (long) get_compas (NULL, 0);
   delta = (long) dif_angle (PrimValue, cap);
   if (previousDelta == 999) {
     previousDelta = delta;
@@ -113,7 +113,7 @@ void primitive_avant (long dl)
 
   if (CapASuivre >= 0) 
   {
-    cap = get_compas (false);
+    cap = get_compas (NULL, 0);
     delta += (int) round (dif_angle (CapASuivre, cap) * FacteurAlignement); // ajoute le delta d'angle à la correction. Si instable proposer un facteur multiplicatif dans fichier config
 
 // debug pour le moment

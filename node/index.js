@@ -143,6 +143,8 @@ It is now ' + now.toISOString() + '.\n\
   done(request, response);
 }
 
+const exec = require('child_process').exec;
+
 var http = require('http');
 var url = require('url');
 
@@ -201,7 +203,9 @@ io.sockets.on('connection', function (socket) {
            
         // from server to Web interface
               
-        if (chaine.indexOf('AXY') == 0) {
+        if (chaine.indexOf('LOG') == 0) {
+              socket.emit('log',{ importance: chaine.charAt(3), texte: chaine.substring(4)});
+        } else if (chaine.indexOf('AXY') == 0) {
             socket.emit('axy',chaine.substring(3));
         } else if (chaine.indexOf('VOLT') == 0) {
               socket.emit('volt',chaine.substring(4));
@@ -248,7 +252,16 @@ io.sockets.on('connection', function (socket) {
       client.write(message + '\0');
     });
 
-            
+    socket.on('rstcom', function (message) {
+      console.log('Reset communication request received');
+      console.log('The parent process is pid ' + process.ppid);
+      exec('kill -10 '+process.ppid, (err, stdout, stderr) => {
+      if (err) {
+            console.error(`exec error: ${err}`);
+            return;
+      }
+    })
+    });
     socket.on('LogFile', function (message) {
       client.write('LOGF' + message + '\0');
     });

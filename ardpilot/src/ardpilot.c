@@ -32,6 +32,10 @@ double pointsX[180];
 double pointsY[180];
 double mesures[180];
 
+int PlanClickAction = 0;
+// default 0 : indicate the place to go
+//         1 : show correct location after self localization survey
+
 extern float CovSeuil;
 extern int LineW;
 extern int PathW, PathD;
@@ -58,20 +62,15 @@ int (*ExpectFunction)();
 #define PORT_NUMBER 8001
 
 /* displays received message to the standard output */
-void control_message (unsigned char action, char *message)
+void control_message (char action, char *message)
 {
 /* todo : manage color and other effects depending on subject and action */
-    char data[1024];
-    
-    // add a \n
-    sprintf (data, "%s\n", message);
-    
+
     if (cmdfd > 0) {
         // control socket mode
-        if (send (cmdfd, data, strlen (data), MSG_NOSIGNAL) < 0) {
+        if (send (cmdfd, message, strlen (message), MSG_NOSIGNAL) < 0) {
           if (errno == EPIPE) {
             printf ("Pipe broken, resetting...\n");
-            recv (cmdfd, data, 256, 0);  // empty
             close (cmdfd);
             cmdfd = 0;
             cmdfd = open_cmd_socket (PORT_NUMBER);
@@ -79,17 +78,29 @@ void control_message (unsigned char action, char *message)
             printf ("Error %d while writing to node server\n", errno);
           }
         }
+        
         //printf ("Message envoyé : %s\n", data);
     } else { // console mode
-        printf ("%s", data);
+        printf ("%s\n", message);
     }
     
-    if (logfd != NULL)
-        fprintf (logfd, "%s", data);
-    if (scriptWritefd != NULL)
+    if (logfd != 0)
+        fprintf (logfd, "%s\n", message);
+    if (scriptWritefd != 0)
     {
-        write (scriptWritefd, data, strlen(data));
+        write (scriptWritefd, message, strlen(message));
     }
+}
+
+void log_message (char action, char *message)
+{
+    /* todo : manage color and other effects depending on subject and action */
+    static char data[1024];
+    
+    // add a \n
+    sprintf (data, "LOG%c%s\n", action, message);
+    control_message (action, data);
+
 }
 
 void
@@ -192,9 +203,7 @@ void interpret_ard (char *buffer, int debug_mode)
     char sequence, oldsequence;
     extern int RSSI[5];
     extern char PrimitiveResult;
-    short xmmin, xmmax, ymmin, ymmax, zmmin, zmmax;
-    short xamin, xamax, yamin, yamax, zamin, zamax;
-  
+
     // for debug only
     double normX[180];
     double normY[180];
@@ -230,7 +239,18 @@ void interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server PING\n");
                 
+                
+                // todo :
+                //
+                // add other measures : volts and mem
+                //
+                // combine in one unique message
+                //
+                // and update gauges accordingly
+                
                 control_message(MSG_INFO, "COLORTPing");
+                sleep(1);
+                control_message(MSG_INFO, &(buffer[1]));
                 break;
                 
             case C_LOG :
@@ -326,7 +346,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server BAT %d\n", x);
                 
-                sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023);
+                sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023); // 560 = 100%
                 control_message(MSG_INFO, message);
                 break;
                 
@@ -354,7 +374,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 sprintf (message, "received scan segment %c.", buffer[2] + '0');
                 control_message(MSG_INFO, message);
                 draw_segment (buffer, buffer[2], C_SCANH);
-                consolidate_points (buffer, buffer[2], C_SCANH, &pointsX, &pointsY, &mesures);
+                consolidate_points (buffer, buffer[2], C_SCANH, pointsX, pointsY, mesures);
                 
                 if ((int) buffer[2] == 6)  // we received all the points
                 {
@@ -396,42 +416,6 @@ void interpret_ard (char *buffer, int debug_mode)
                 control_message(MSG_INFO, message);
                 draw_segment (buffer, buffer[2], C_SCANV);
                 break;
-            
-            case C_CALCMP :
-                if (debug_mode == 1)
-                    printf ("    ARD-->Server CALCMP\n");
-            
-                xmmin = (buffer[1] << 8) + buffer[2];
-                xmmax = (buffer[3] << 8) + buffer[4];
-                ymmin = (buffer[5] << 8) + buffer[6];
-                ymmax = (buffer[7] << 8) + buffer[8];
-                zmmin = (buffer[9] << 8) + buffer[10];
-                zmmax = (buffer[11] << 8) + buffer[12];
-            
-                xamin = (buffer[13] << 8) + buffer[14];
-                xamax = (buffer[15] << 8) + buffer[16];
-                yamin = (buffer[17] << 8) + buffer[18];
-                yamax = (buffer[19] << 8) + buffer[20];
-                zamin = (buffer[21] << 8) + buffer[22];
-                zamax = (buffer[23] << 8) + buffer[24];
-            
-            
-                sprintf (message, "xm %hd %hd", xmmin, xmmax);
-                control_message(MSG_INFO, message);
-                sprintf (message, "ym %hd %hd", ymmin, ymmax);
-                control_message(MSG_INFO, message);
-                sprintf (message, "zm %hd %hd", zmmin, zmmax);
-                control_message(MSG_INFO, message);
-            
-                sprintf (message, "xa %hd %hd", xamin, xamax);
-                control_message(MSG_INFO, message);
-                sprintf (message, "ya %hd %hd", yamin, yamax);
-                control_message(MSG_INFO, message);
-                sprintf (message, "za %hd %hd", zamin, zamax);
-                control_message(MSG_INFO, message);
-            
-                break;
-            
                 
             case C_PRI :
                 if (debug_mode == 1)
@@ -580,13 +564,23 @@ int exec_cmd (char *buffer, int debug_mode)
         {
             sprintf (message, "COLOR");
             
-            if (locate_myself() == 1)
+//            if (locate_myself() == 1)
                 strcat (message, "T");
-            else
-                strcat (message, "F");
+//            else
+//               strcat (message, "F");
             
             strcat (message, "locate");
             control_message(MSG_INFO, message);
+        }
+        else if (!strncmp(buffer, "LOC_OK", 6))
+        {
+            printf ("Localization approved\n");
+            average_and_save_wifi (-1,-1);
+        }
+        else if (!strncmp(buffer, "LOC_NOK", 7))
+        {
+            printf ("Localization rejected\n");
+            PlanClickAction = 1;
         }
         else if (!strncmp(buffer, "TOPW", 4))
         {
@@ -730,10 +724,19 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
                 control_message(MSG_INFO, "COLORTRunScript");
             }
         }
-        else if (!strncmp(buffer, "GOTO", 4))
+        else if (!strncmp(buffer, "GOTO", 4)) // received a click on the plan
         {
             sscanf (&(buffer[4]), "%d %d", &x, &y);
-            printf ("Received request to go to x=%d, y=%d\n", x, y);
+            switch (PlanClickAction) {
+                case 0 :
+                    printf ("Received request to go to x=%d, y=%d\n", x, y);
+                break;
+                
+                case 1 :
+                    average_and_save_wifi (x,y);
+                    PlanClickAction = 0;
+                break;
+            }
         }
         else
         {
@@ -818,12 +821,19 @@ void read_handler (int signum, siginfo_t *si, ucontext_t *unused)
 void ard_block_mode ()
 {
     int flags;
+    struct timeval tv;
 
+    tv.tv_sec = 3;  // timeout after 3 seconds
+    tv.tv_usec = 0;
+    
+    
     ArdBlocLevel++;
     
     flags = fcntl(ardfd, F_GETFL);
     if (fcntl(ardfd, F_SETFL, flags & ~O_ASYNC & ~O_NONBLOCK) == -1)
         exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+    setsockopt(ardfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    
 }
 
 void ard_async_mode ()
@@ -856,6 +866,12 @@ void pipe_broken (int signum)
     killpg( process, SIGKILL);
     cleanup_fds ();
     exit(0);
+}
+
+void reset_communication (int signum)
+{
+    printf("Reset communication request\n");
+
 }
 
 int open_cmd_socket (int portno)
@@ -975,7 +991,7 @@ int write_ard (int fd, char *message)
 int main(int argc, char *argv[])
 {
     int n, opt, optFileName;
-    struct sigaction int_action, io_action, old_action, pipe_action;
+    struct sigaction int_action, io_action, old_action, pipe_action, rst_action;
     pid_t pgid;
     char buffer[4];
     char message[64];
@@ -987,7 +1003,7 @@ int main(int argc, char *argv[])
     {
         // Code only executed by child process
         sleep (1);
-        execl ("/usr/local/bin/node", "/usr/local/bin/node", "/home/olivier/projets/node/index.js", (char *) 0);
+        execl ("/usr/bin/node", "/usr/bin/node", "/home/olivier/projets/node/index.js", (char *) 0);
     }
     else if (process < 0)            // failed to fork
     {
@@ -1049,6 +1065,14 @@ int main(int argc, char *argv[])
         // comment if core dump expected
 //      sigaction (SIGQUIT, &int_action, NULL);
         
+        // setup interruptions : rest communication (SIGUSR1)
+        
+        rst_action.sa_handler = reset_communication;
+        sigemptyset (&rst_action.sa_mask);
+        rst_action.sa_flags = 0;
+        
+        sigaction (SIGUSR1, &rst_action, NULL);
+        
         // setup interruptions : pipe broken
     
         pipe_action.sa_handler = pipe_broken;
@@ -1090,16 +1114,16 @@ int main(int argc, char *argv[])
         init_appt_distances ();
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
-        control_message(MSG_INFO, "Now opening arduino channel ... ");
+        log_message(MSG_INFO, "Now opening arduino channel ... ");
         ardfd = open_ard_socket (PORT_NUMBER + 1);
         
         control_message(MSG_INFO, "Starting activity ... ");
+        control_message(MSG_INFO, "Please turn the robot 360° on itself upon startup");
         init_command_mode ();
         strcpy(Expecting, "");
         
         boucle_attente (ACTION_NULL, 0xff, 1);
     }
-    
     // Code executed by both parent and child.
     
     return 0;

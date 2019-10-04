@@ -74,6 +74,8 @@ void manage_command (byte len) {
   
     obuffer[0] = C_PING;
     obuffer[1] = '\0';
+    get_compas (obuffer, 64); 
+  
     wifi_write();
     break;
     
@@ -144,11 +146,11 @@ void manage_command (byte len) {
     }
     break;
 */
-  case C_LIDAR:
+/*  case C_LIDAR:
   
     get_lidar (sequence);
     break;
-
+*/
   case C_SR1:
   case C_SR2:
   
@@ -322,7 +324,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));  // keep this one as kind of prrof of rea
         // initialisation de la primitive;
  
         PrimValue = atoi(&(ibuffer[3])); // consigne d'angle
-        cap = get_compas (false); // angle actuel
+        cap = get_compas (NULL, 0); // angle actuel
 
         // determine which way to turn - global var so no need to calculate each time
         b1 = dif_angle (PrimValue, cap);
@@ -343,7 +345,7 @@ strcpy (&(obuffer[1]), &(ibuffer[2]));  // keep this one as kind of prrof of rea
       case P_SUIVI_G :
      
         if (Primitive == P_AVANT_CAP)
-          CapASuivre = get_compas (false);
+          CapASuivre = get_compas (NULL, 0);
         else
           CapASuivre = -1;
                    

@@ -32,15 +32,16 @@ struct wifiref
 {
     unsigned int zone;
     char name[32];
-    struct _ssid ssid[4][10]; // la matrice elle-même
+    struct _ssid ssid[4][10]; // the actual matrix
     int i; // ordonnée dans le plan de l'appart (unused)
     int j; // abscisse dans le plan de l'appart (unused)
-    int Releves; // nombre de mesures
+    int Releves; // number of measurements (to calculate average)
+    float distance; // store the distance from the robot while locating itself
 };
 
 // prototypes
 
-void control_message (unsigned char action, char *message);
+void control_message (char action, char *message);
 int exec_cmd (char *buffer, int debug_mode);
 int write_ard (int fd, char *message);
 void interpret_ard (char *buffer, int debug_mode);
@@ -48,8 +49,8 @@ void exit_on_failure (char *reason);
 void init_command_mode ();
 void ard_block_mode ();
 void ard_async_mode ();
-
-// from environment.c
+int open_cmd_socket (int portno);
+int read_cmd (int fd, char fin);// from environment.c
 void check_free_mem (unsigned char sequence);
 void check_compas (unsigned char sequence);
 void check_voltage ();
@@ -58,12 +59,15 @@ void check_wifi_environment (char sequence);
 int get_health ();
 int analyze_environment ();
 int record_wifi_reference (int n);
+void average_and_save_wifi (int x, int y);
 
 // from drawing.c
 void draw_plan ();
 void consolidate_points (char *buffer, char segment, char orientation, double X[], double Y[], double mesures[]);
 void draw_segment (char *buffer, char segment, char orientation);
 void draw_line (int xs, int ys, int xe, int ye);
+void draw_matched_scan (double x[], double y[], int taille, int posx, int posy);
+void display_room_from_matrix (unsigned int zone, char *color);
 
 
 // from read_config
@@ -73,6 +77,8 @@ void read_wifi_matrixes();
 void write_wifi_matrixes();
 FILE *open_wifi_matrix_file (int MatRef);
 void close_wifi_matrix_file (FILE *fd);
+void init_appt_distances ();
+void read_and_send_config ();
 
 // from commandes.c
 int oriente_robot (int cap_souhaite, int tolerance);
@@ -80,5 +86,9 @@ int bloc_get_top_wifi ();
 int locate_myself ();
 int stop_command_script(char *ScriptName);
 int run_command_script(char *ScriptName);
+
+// from calculs.c
+double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy);
+void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[]);
 
 #endif /* ardpilot_h */
