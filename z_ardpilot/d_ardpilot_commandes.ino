@@ -234,8 +234,10 @@ void manage_command (byte len) {
       break;
       case F_PNGNUM :
         PngNum = atoi(&(ibuffer[2])); 
-strcpy (&(obuffer[1]), &(ibuffer[2]));  // keep this one as kind of prrof of read
- wifi_write();
+      break;
+      case F_END :
+        strcpy (&(obuffer[1]), "Initialization complete...\n");  // keep this one as kind of prrof of read
+        wifi_write();
       break;
       default :
 //        strcpy (&(obuffer[1]), "Unknown Parameter in config file");

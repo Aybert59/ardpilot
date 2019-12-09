@@ -22,7 +22,7 @@
 // ce fichier implémente les commandes (bloquantes et non bloquantes) qui seront utilisées
 // depuis le raspberry pour piloter le robot
 
-extern int ardfd, scriptfd, scriptWritefd;
+extern int ardfd, cmdfd, scriptfd, scriptWritefd;
 extern int cap_correction[];
 unsigned char Sequence[256];
 pid_t RunningScript = (pid_t) NULL;
@@ -47,56 +47,49 @@ void init_command_mode ()
 }
 
 
-void boucle_attente (unsigned char parametre, unsigned char sequence, int autorise_wildchar) // a fusionner avec la boucle ppale, loopcnt en static
+void boucle_attente (unsigned char parametre)
+// loops until parameter is received.
+// if parameter == ACTION_NULL then will never exits - as nobody sends this parameter
 {
-    static int loopCnt = 0;
     char buffer[4];
-    struct pollfd fds[1];
-    extern int cmdfd;
     int ret;
+    fd_set rfds;
+    unsigned char val = ACTION_NULL;
     
-    printf("WARING SHOULD NOT USE boucle_attente ANYMORE\n");
-    
-    fds[0].fd = cmdfd;
-    fds[0].events = POLLIN;
 
-    while ((Sequence[parametre] != sequence) && (( Sequence[parametre] != '*') || (autorise_wildchar == 0)))
+    while ((parametre == ACTION_NULL) || (val != parametre))
     {
         // attente soit du retour de la séquence demandée, soit ecrasée par une commande de l'interface graphique
 
-//printf ("waiting %d %d %d\n", (int) parametre, (int) Sequence[parametre], (int) sequence);
-        loopCnt++;
-        ret = poll(fds, 1, 1000); // attente 1 seconde, remplace le sleep(1)
-        
-/* debug the poll
- if (ret == -1) {
-            printf ("erreur lors du poll\n"); // timeout has been interrupted (by a SIGIO on other FDs)
-        } else if (ret == 0) {
-            printf ("nothing to read\n"); // timeout
-        } else {
-            printf ("something to read\n");
-        }
-*/
-        if (fds[0].revents & POLLIN)
-        {
-            // something available
-            read_cmd (cmdfd, '\0');
-        }
-        
-        //sleep (1); was needed when both FDs were async. now replaced by the poll.
-        if ((loopCnt == 20) && (NoInterrupt == 0))
-        {
-            // demander un ping toutes les 20 secondes
-            control_message(MSG_INFO, "COLORFPing");
-            
-            buffer[0] = C_PING;
-            buffer[1] = '\0';
-            write_ard (ardfd, buffer);
-            
-            loopCnt = 0;
-            
-        }
+        // initialize file descriptors table
+        FD_ZERO(&rfds);
+        if (ardfd > 0)
+            FD_SET(ardfd, &rfds);
+        if (cmdfd > 0)
+            FD_SET(cmdfd, &rfds);
+        if (scriptfd > 0)
+            FD_SET(scriptfd, &rfds);
 
+        
+        ret = select(FD_SETSIZE, &rfds, NULL, NULL, NULL); // wait forever
+
+
+        if (ret == -1)
+             printf ("error on select()");
+ //        else if (ret)
+ //            printf("Data is available now.\n");
+             /* FD_ISSET(0, &rfds) will be true. */
+ //        else
+ //            printf("No data within timeout period\n");
+        
+
+        if (FD_ISSET(cmdfd, &rfds))
+            val = read_cmd (cmdfd, '\0');
+        if (FD_ISSET(ardfd, &rfds))
+            val = read_ard (ardfd); // in this case val equals the command received from the robot
+        if (FD_ISSET(scriptfd, &rfds))
+            val = read_cmd (scriptfd, '\n');
+        
     }
 }
 
@@ -105,12 +98,9 @@ char attente_bloquante (unsigned char parametre, unsigned char sequence) // a fu
     char buffer[64];
     unsigned char cmd, len;
     int j, n;
-    extern int ardfd;
     int flags;
     
-    // change ARDFD en mode bloquant, sans envoyer de SIGIO
-    ard_block_mode ();
-    
+     
     buffer[0] = ACTION_NULL;
 printf ("wait ard to send me expected param\n");
     
@@ -131,8 +121,6 @@ printf ("wait ard to send me expected param\n");
     }
 printf ("got it %c!\n", buffer[3]);
     
-    // remise ARDFD en mode non bloquant, avec SIGIO
-    ard_async_mode ();
     
     return (buffer[3]);  // renvoie T ou F mais seulement dans le cas C_COLOR
 }
@@ -140,34 +128,18 @@ printf ("got it %c!\n", buffer[3]);
 
 int bloc_get_top_wifi ()
 {
-    unsigned char sequence;
-    int i;
-    
 printf("get top wifi\n");
-    
-    sequence = Sequence[C_TOPWIFI] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-    sequence++;
-    
-    NoInterrupt = 1;
-    get_top_wifi (sequence);
-    boucle_attente (C_TOPWIFI, sequence, 0);
-    NoInterrupt = 0;
+         
+    get_top_wifi ();
+    boucle_attente (C_TOPWIFI);
     
     return 1;
 }
 
 int bloc_get_memory_free ()
 {
-    unsigned char sequence;
-    int i;
-    
-    sequence = Sequence[C_BAT] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-        sequence++;
-
-    check_free_mem (sequence);
-    boucle_attente (C_BAT, sequence, 0);
+    check_free_mem ();
+    boucle_attente (C_MEM);
     
     // afficher les parametres relevés
     printf ("%d\n",MemoryFree);
@@ -190,8 +162,6 @@ int bloc_get_compas ()
     
     check_compas (sequence);
     
-    // change ARDFD en mode bloquant, sans envoyer de SIGIO
-    ard_block_mode ();
     
     buffer[0] = ACTION_NULL;
     while (buffer[0] != C_CMP)
@@ -214,8 +184,6 @@ int bloc_get_compas ()
         }
     }
     
-    // remise ARDFD en mode non bloquant, avec SIGIO
-    ard_async_mode ();
     
     printf("current orientation brute %d corrigée %d\n",x,c);
     return c;
@@ -240,10 +208,10 @@ duree = distance;
     buffer[0] = C_PRI;
     buffer[1] = sequence;
     buffer[2] = P_AVANT;
-    sprintf (&(buffer[3]), "%d %d",vitesse,duree);
+    sprintf (&(buffer[3]), "%d %u",vitesse,duree);
     
     write_ard (ardfd, buffer);
-    boucle_attente (C_PRI, sequence, 1);
+    boucle_attente (C_PRI);
     
     // afficher les parametres relevés
     
@@ -363,7 +331,7 @@ int run_command_script(char *ScriptName)
     
     if (!strcmp (ScriptName, "Load Script")) // the default string
     {
-        control_message(MSG_INFO, "ERROR : no script specified");
+        control_message(MSG_INFO, "ERROR : no script specified", 0);
     }
     else
     {
@@ -371,12 +339,12 @@ int run_command_script(char *ScriptName)
         /* Make pipes */
         if( pipe(pc) < 0)
         {
-            control_message(MSG_INFO, "ERROR : Can't make pipe");
+            control_message(MSG_INFO, "ERROR : Can't make pipe", 0);
             return(0);
         }
         if( pipe(cp) < 0)
         {
-            control_message(MSG_INFO, "ERROR : Can't make pipe");
+            control_message(MSG_INFO, "ERROR : Can't make pipe", 0);
             return(0);
         }
         
@@ -384,7 +352,7 @@ int run_command_script(char *ScriptName)
         switch( RunningScript = fork() )
         {
             case -1:
-                control_message(MSG_INFO, "ERROR : Can't fork script");
+                control_message(MSG_INFO, "ERROR : Can't fork script", 0);
                 return(0);
             case 0:
                 /* Child. */
@@ -397,7 +365,7 @@ int run_command_script(char *ScriptName)
                 name[1] = commandName;
                 execvp(name[0], name);
 /*    printf ("errno : %d\n", errno); */
-                control_message(MSG_INFO, "ERROR : Can't exec script");
+                control_message(MSG_INFO, "ERROR : Can't exec script", 0);
                 printf("end\n");
                 exit(1);
             default:
@@ -407,12 +375,14 @@ int run_command_script(char *ScriptName)
                 close(cp[1]);
                 scriptfd = cp[0];
                 scriptWritefd = pc[1];
+
                     
-                fcntl(scriptfd, F_SETOWN, getpid());
+/*                fcntl(scriptfd, F_SETOWN, getpid());
                 fcntl(scriptfd, F_SETSIG, SIGIO);
                 flags = fcntl(scriptfd, F_GETFL);
                 if (fcntl(scriptfd, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
                     exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+ */
         }
     }
     return(1);

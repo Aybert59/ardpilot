@@ -13,19 +13,24 @@ extern int NoInterrupt;
 int TopWIFICount = 0;
 
 float distance_matrix (struct wifiref *CurrentWifi, struct wifiref *RefWifi);
+
 extern unsigned char Sequence[];
+extern int DebugMode;
+extern struct cellule Appartement[];
+extern struct wifiref WifiMatrix[];
+extern int MaxMatrices;
+extern int ardfd;
 
+struct wifiref CurrentWifi; // the latest measured WIFI matrix
 
-
-void get_top_wifi (char sequence)
+void get_top_wifi ()
 {
-    extern int ardfd;
     char message[4];
     
     if (TopWIFICount == 0) // si déjà en cours on ne fait rien :-)
     {
         message[0] = C_TOPWIFI;
-        message[1] = sequence;
+        message[1] = '*'; // previously used for sequence
         message[2] = '\0';
         write_ard (ardfd, message);
     }
@@ -49,44 +54,20 @@ int analyze_environment ()
     return 0;
 }
 
-void check_free_mem (unsigned char sequence)
+void check_free_mem ()
 {
     char message[4];
-    extern int ardfd;
     
     message[0] = C_MEM;
-    message[1] = sequence;
+    message[1] = '*';
     message[2] = '\0';
     write_ard (ardfd, message);
 }
 
-void block_check_free_mem (unsigned char sequence)
-{
-    char message[4];
-    extern int ardfd;
-    extern int DebugMode;
-    char buffer[64];
-    int n;
-    
-    ard_block_mode ();
-    check_free_mem (sequence);
-    
-    buffer[0] = '\0';
-    while (buffer[0] != C_MEM)
-    {
-        n = read(ardfd, buffer, 64);
-        if (n > 0)
-        {
-            interpret_ard (buffer, DebugMode);
-        }
-    }
-    ard_async_mode ();
-}
 
 void check_compas (unsigned char sequence)
 {
     char message[4];
-    extern int ardfd;
     
     message[0] = C_CMP;
     message[1] = sequence;
@@ -97,7 +78,6 @@ void check_compas (unsigned char sequence)
 void check_voltage ()
 {
     char message[4];
-    extern int ardfd;
     
     message[0] = C_BAT;
     message[1] = '\0';
@@ -111,18 +91,15 @@ int get_health ()
     
     // récuperer free mem
     
-    check_free_mem ('*');
-    pause();
-    
+    bloc_get_memory_free ();
     // ne mache pas : block_check_free_mem ('*');
  
-    sleep (1);
+//    sleep (1);
     // récupérer vitesse des moteurs
     
     // récupérer charge batterie
     check_voltage ();
-    pause();
-    
+
     // récupérer orientation boussole
     
     // mesurer durée boucle vide / et boucle moyenne
@@ -152,11 +129,9 @@ printf ("Matrix to update %d\n", MatRef);
     if (fd == NULL)
         return (0);
  
-    // change ARDFD en mode bloquant, sans envoyer de SIGIO
-    ard_block_mode ();
-    
-    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n");
-    control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n");
+   
+    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n", 0);
+    control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n", 0);
     
 
     for (i=0; i<4; i++)
@@ -174,7 +149,7 @@ printf ("Matrix to update %d\n", MatRef);
         }
             
             
-        get_top_wifi (Sequence[C_TOPWIFI]);
+        get_top_wifi ();
 
         for (j=0; j< 10; j++)
         {
@@ -256,15 +231,14 @@ printf ("Matrix to update %d\n", MatRef);
         WifiMatrix[MatRef].Releves += 1;
     }
     
-    // remise ARDFD en mode non bloquant, avec SIGIO
-    ard_async_mode ();
+
     close_wifi_matrix_file (fd);
     
     if (MatRef >= 0)
     {
         write_wifi_matrixes ();
     } else {
-        control_message(MSG_WARNING, "Please update Matrix file with name, zone, and other data\n\n");
+        control_message(MSG_WARNING, "Please update Matrix file with name, zone, and other data\n\n", 0);
     }
 
     
@@ -288,23 +262,13 @@ int locate_myself ()
     int i,j,n,p;
     int codeRet;
     int rang;
-    struct wifiref CurrentWifi;
     float d, dmin;
-    extern struct wifiref WifiMatrix[];
-    extern int MaxMatrices;
-    extern int ardfd;
     char buffer[64];
     unsigned char len;
-    extern int DebugMode;
-    
-    NoInterrupt = 1;
 
     
-    // change ARDFD en mode bloquant, sans envoyer de SIGIO
-    ard_block_mode ();
-    
-    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n");
-    control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n");
+    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n", 0);
+    control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n", 0);
     
     // step 0 cleanup & prepare
 
@@ -330,7 +294,7 @@ int locate_myself ()
             break;
         }
         
-        get_top_wifi (Sequence[C_TOPWIFI]);
+        get_top_wifi ();
         
         for (j=0; j< 10; j++)
         {
@@ -357,10 +321,6 @@ int locate_myself ()
         sleep (2);
     }
     
-    // remise ARDFD en mode non bloquant, avec SIGIO
-    ard_async_mode ();
-    NoInterrupt = 0;
-
     // step 1bis verify
     
     if (DebugMode == 1)
@@ -396,12 +356,15 @@ int locate_myself ()
         }
     }
     
-    // step 3 display results
+    // step 3 display results for WIFI
     
     if (DebugMode == 1)
     {
         printf ("*** Closest matrix is %d ***\n\n",rang);
     }
+    CurrentWifi.Releves = rang; // store here the number of the nearest matrix
+    
+    void clear_plan ();
     display_room_from_matrix (WifiMatrix[rang].zone, "Aquamarine");
     
     for (i=0; i<MaxMatrices; i++)
@@ -412,14 +375,112 @@ int locate_myself ()
             {
                 printf ("* Near matrix found %d *\n",i);
             }
-            display_room_from_matrix (WifiMatrix[i].zone, "BurlyWood");
+//            if (i != rang)
+//            {
+//                display_room_from_matrix (WifiMatrix[i].zone, "BurlyWood");
+//            }
         }
     }
-    
+    if (DebugMode == 1)
+    {
+        printf ("end of location function\n");
+    }
     return codeRet; // 1 = ok, 0 = pb de positionnement
 }
 
 void average_and_save_wifi (int x, int y)
 {
+    int MatrixToUpdate;
+    unsigned int zone;
+    int i, j, k;
+    int found;
+    
+    
     printf ("real location %d %d\n",x,y);
+    
+    // step 1 : if x and y has positive values find the Matrix number associated
+    
+    if ((x >= 0) && (y >= 0))
+    {
+        zone = Appartement[y * 93 + x].piece;
+        for (i=0; i<MaxMatrices; i++)
+        {
+            if (WifiMatrix[i].zone == zone)
+            {
+                MatrixToUpdate = i;
+            }
+        }
+    } else {
+        MatrixToUpdate = CurrentWifi.Releves;
+    }
+    CurrentWifi.zone = WifiMatrix[MatrixToUpdate].zone;
+    
+    if (DebugMode == 1)
+    {
+        printf ("Will update Matrix #%d\n", MatrixToUpdate);
+    }
+    
+    // step 2 : make a copy of the original file
+    rename_matrix ();
+    
+    // step 3 : average the detected matrix
+    
+    for (i=0; i<4; i++) // for each matrix orientation
+    {
+        for (k=0; k< 10; k++)
+        {
+            CurrentWifi.ssid[i][k].updated = 0;
+        }
+        
+        for (j=0; j< 10; j++)
+        {
+            found = 0;
+            for (k=0; k< 10; k++) // if we have identical SSID label then let's average
+            {
+                if (!strcmp (WifiMatrix[MatrixToUpdate].ssid[i][j].label, CurrentWifi.ssid[i][k].label) )
+                {
+                    WifiMatrix[MatrixToUpdate].ssid[i][j].val =
+                        ((WifiMatrix[MatrixToUpdate].ssid[i][j].val * WifiMatrix[MatrixToUpdate].Releves) + CurrentWifi.ssid[i][k].val) /
+                            (WifiMatrix[MatrixToUpdate].Releves + 1);
+                    CurrentWifi.ssid[i][k].updated = 1;
+                    
+                    found = 1;
+                    break;
+                }
+            }
+            
+            if (found == 0) // the SSID in the Matrix to be updated has not been measured in the last sample
+            {
+                WifiMatrix[MatrixToUpdate].ssid[i][j].val =
+                    (WifiMatrix[MatrixToUpdate].ssid[i][j].val * WifiMatrix[MatrixToUpdate].Releves + 99)  /
+                        (WifiMatrix[MatrixToUpdate].Releves + 1);
+                CurrentWifi.ssid[i][k].updated = 1;
+            }
+        }
+        
+        for (k=0; k< 10; k++)
+        {
+            if (CurrentWifi.ssid[i][k].updated == 0) // this SSID of the sample matrix has not been detected within the Matrix to update (new)
+            {
+                for (j=0; j< 10; j++)  // search for an SSID at 99 and replace by the new one
+                {
+                    if (WifiMatrix[MatrixToUpdate].ssid[i][j].val == 99)
+                    {
+                        WifiMatrix[MatrixToUpdate].ssid[i][j].val =
+                            ((99 * WifiMatrix[MatrixToUpdate].Releves) + CurrentWifi.ssid[i][k].val) / (WifiMatrix[MatrixToUpdate].Releves + 1);
+                        strcpy (WifiMatrix[MatrixToUpdate].ssid[i][j].label, CurrentWifi.ssid[i][k].label);
+                        break;
+                    }
+                
+                }
+            }
+        }
+    }
+     
+    WifiMatrix[MatrixToUpdate].Releves += 1;
+
+    
+    // step 4 : write the updated file
+    write_wifi_matrixes ();
+    
 }

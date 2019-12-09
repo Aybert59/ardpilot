@@ -63,7 +63,7 @@ void draw_segment (char *buffer, char segment, char orientation)
         sprintf (temp, " %d %d", x, y);
         strcat (message, temp);
     }
-    control_message(MSG_INFO, message);
+    control_message(MSG_INFO, message, 10);
 }
 
 void consolidate_points (char *buffer, char segment, char orientation, double X[], double Y[], double mesures[])
@@ -108,12 +108,12 @@ void draw_line (int xs, int ys, int xe, int ye)
     sprintf (message, "DRAWLINE %d %d %d %d", xs, ys, xe, ye);
     if (DebugMode ==1)
         printf ("drawing line %s\n", message);
-    control_message(MSG_INFO, message);  // semble ne pas fonctionner, rien n'apparait chez node.js ?
+    control_message(MSG_INFO, message, 10);  // semble ne pas fonctionner, rien n'apparait chez node.js ?
 }
 
 void clear_plan ()
 {
-    control_message(MSG_INFO, "CLEARPLAN");
+    control_message(MSG_INFO, "CLEARPLAN", 10);
 }
 
 void draw_plan ()
@@ -136,7 +136,7 @@ void draw_plan ()
                 strcat (message, temp);
             }
         }
-        control_message(MSG_INFO, message);
+        control_message(MSG_INFO, message, 0);
 
     }
     
@@ -184,7 +184,7 @@ void draw_matched_scan (double x[], double y[], int taille, int posx, int posy)
         }
         if (point == 1)
         {
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 10);
             if (DebugMode == 1)
                 printf ("%s-\n",message);
         }
@@ -212,7 +212,7 @@ void display_room_from_matrix (unsigned int zone, char *color)
                 strcat (message, temp);
             }
         }
-        control_message(MSG_INFO, message);
+        control_message(MSG_INFO, message, 0);
         
     }
 }

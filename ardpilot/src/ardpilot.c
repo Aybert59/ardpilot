@@ -24,6 +24,8 @@ FILE *logfd = 0;
 int ArdBlocLevel = 0;
 
 int DebugMode = 0;
+int LearningMode = 0;
+int LocInProgress = 0;
 char CompasCallibration = 'F';
 
 pid_t process;
@@ -48,12 +50,13 @@ extern int RSSI[];
 extern int MemoryFree;
 extern int Compas;
 extern int TopWIFICount;
+extern struct wifiref CurrentWifi; // the latest measured WIFI matrix
 
 int NoInterrupt = 0;
 
 extern void detectlines (double *, double *, double *, int, int, float);
 extern void detectpath (double *, double *, double *, int, int, int);
-extern void boucle_attente (unsigned char, unsigned char, int);
+extern void boucle_attente (unsigned char);
 
 char logFileName[64];
 char Expecting[16];
@@ -62,10 +65,15 @@ int (*ExpectFunction)();
 #define PORT_NUMBER 8001
 
 /* displays received message to the standard output */
-void control_message (char action, char *message)
+void control_message (char action, char *message, int attente) // attente in ms, wait for the message to be interpreted by GUI
 {
+    struct timeval timeout;
 /* todo : manage color and other effects depending on subject and action */
 
+    timeout.tv_sec = 0;
+    timeout.tv_usec = attente * 1000; /* need to wait after each message is sent othewise node cannot manage - lets try 50 milliseconds */
+    
+    
     if (cmdfd > 0) {
         // control socket mode
         if (send (cmdfd, message, strlen (message), MSG_NOSIGNAL) < 0) {
@@ -87,9 +95,10 @@ void control_message (char action, char *message)
     if (logfd != 0)
         fprintf (logfd, "%s\n", message);
     if (scriptWritefd != 0)
-    {
         write (scriptWritefd, message, strlen(message));
-    }
+    
+    if (attente > 0)
+        select(0, NULL, NULL, NULL, &timeout);
 }
 
 void log_message (char action, char *message)
@@ -99,13 +108,13 @@ void log_message (char action, char *message)
     
     // add a \n
     sprintf (data, "LOG%c%s\n", action, message);
-    control_message (action, data);
+    control_message (action, data, 0);
 }
 
 void
 cleanup_fds ()
 {
-    control_message(MSG_WARNING, "\nCleaning up");
+    control_message(MSG_WARNING, "\nCleaning up", 0);
     
     close (cmdfd);
     close (ardfd);
@@ -154,10 +163,10 @@ int match_expecting (char buffer[], char Expecting[])
 }
 
 /* reads message received on command socket */
-int read_ard (int fd)
+unsigned char read_ard (int fd)
 {
     int n;
-    unsigned char len;
+    unsigned char len, val;
     char buffer[64];
     
     // le premier char reçu est la longueur de ce qui arrive
@@ -170,10 +179,11 @@ int read_ard (int fd)
         printf(" got %d\n",n);
     
     if (n < 1)
-        return 0;
+        return ACTION_NULL;
+    
     buffer[n] = '\0';
     
-    if (match_expecting (buffer, Expecting) > 0)
+/*    if (match_expecting (buffer, Expecting) > 0)
     // si une chaine est attendue et on la reçoit, alors on execute la fonction prévue et c'est tout
     {
         n = (*ExpectFunction)(buffer);
@@ -186,27 +196,29 @@ int read_ard (int fd)
     // si rien n'est attendu en particulier, alors on traite le buffer.
     // sinon, on ne fait rien, on attend ce qui est attendu
     {
-        interpret_ard (buffer, DebugMode);
-    }
+ */
+        val = interpret_ard (buffer, DebugMode);
+/*    }
+ */
 
-    return n;
+    return val;
 }
 
-void interpret_ard (char *buffer, int debug_mode)
+unsigned char interpret_ard (char *buffer, int debug_mode)
 {
     char message[128];
     int x, y, z;
     char *p;
-    double angle;
+    double cap, angle, minAngle;
+    double spread, step;
     unsigned char cmd;
     char sequence, oldsequence;
-    extern int RSSI[5];
+//    extern int RSSI[5];
     extern char PrimitiveResult;
 
-    // for debug only
     double normX[180];
     double normY[180];
-    int posx, posy;
+    int posx, posy, minx, miny;
     double val;
     
     // structure :
@@ -247,16 +259,16 @@ void interpret_ard (char *buffer, int debug_mode)
                 //
                 // and update gauges accordingly
                 
-                control_message(MSG_INFO, "COLORTPing");
+                control_message(MSG_INFO, "COLORTPing", 10);
                 sleep(1);
-                control_message(MSG_INFO, &(buffer[1]));
+                control_message(MSG_INFO, &(buffer[1]), 10);
                 break;
                 
             case C_LOG :
                 if (debug_mode == 1)
                     printf ("    ARD-->Server LOG %s\n",&(buffer[1]));
                 
-                control_message(MSG_INFO, &(buffer[1]));
+                control_message(MSG_INFO, &(buffer[1]), 10);
                 break;
                 
             case C_CMP :
@@ -273,7 +285,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server CMP %d (%d)\n", x, Compas);
                 
                 sprintf (message, "AXY %d", Compas);
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
             
             case C_LIDAR :
@@ -283,7 +295,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server Lidar %d \n", x );
             
                 sprintf (message, "Lidar %d ", x);
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
             
             case C_SR1 :
@@ -293,7 +305,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server SR1 %d\n", x);
                 
                 sprintf (message, "SR1 %d", x);
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
             case C_SR2 :
                 sscanf(&(buffer[2]), "%d", &x);
@@ -302,14 +314,14 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server SR2 %d\n", x);
                 
                 sprintf (message, "SR2 %d", x);
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_PARM :
                 if (debug_mode == 1)
-                    printf ("    ARD-->Server PARM\n", x);
+                    printf ("    ARD-->Server PARM %d\n", x);
                 
-                control_message(MSG_INFO, "Reloading config parameters");
+                control_message(MSG_INFO, "Reloading config parameters", 0);
                 read_and_send_config ();
                 break;
                 
@@ -318,7 +330,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server DISTL %s\n", &(buffer[1]));
                 
                 sprintf (message, "Distance Gauche : %s", &(buffer[1]));
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_DISTR :
@@ -326,7 +338,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server DISTR %s\n", &(buffer[1]));
                 
                 sprintf (message, "Distance Droite : %s", &(buffer[1]));
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 0);
                 break;
                 
             case C_MEM :
@@ -336,7 +348,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server MEM %d\n", MemoryFree);
                 
                 sprintf (message, "MEM %d", MemoryFree);
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_BAT :
@@ -346,7 +358,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server BAT %d\n", x);
                 
                 sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023); // 560 = 100%
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
 
@@ -357,12 +369,12 @@ void interpret_ard (char *buffer, int debug_mode)
                 
                 // attention retenir oldsequnce les 9 premières fois
                 TopWIFICount++;
-                control_message(MSG_INFO, &(buffer[2]));
-                if (TopWIFICount = 10)
+                control_message(MSG_INFO, &(buffer[2]), 10);
+                if (TopWIFICount == 10)
                 {
                     TopWIFICount = 0;
                     sleep (1);
-                    control_message(MSG_INFO, "COLORTTopWifi");
+                    control_message(MSG_INFO, "COLORTTopWifi", 50);
                 }
                 break;
                 
@@ -371,39 +383,62 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server SCANH\n");
                 
                 sprintf (message, "received scan segment %c.", buffer[2] + '0');
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 draw_segment (buffer, buffer[2], C_SCANH);
                 consolidate_points (buffer, buffer[2], C_SCANH, pointsX, pointsY, mesures);
                 
                 if ((int) buffer[2] == 6)  // we received all the points
                 {
-                    /*
-                     printf ("X = [");
-                     for (x=0; x<180; x++)
-                     {
-                     printf ("%f,",pointsX[x]);
-                     }
-                     printf ("]\n");
-                     printf ("Y = [");
-                     for (x=0; x<180; x++)
-                     {
-                     printf ("%f,",pointsY[x]);
-                     }
-                     printf ("]\n");
-                     */
-                    //for (z=0;z<180;z++)
-                    //    printf("%f,%f\n",pointsX[z], pointsY[z]);
-                    
-                    printf("Checking for objects\n");
-                    detectlines (pointsX, pointsY, mesures, 180, LineW, CovSeuil);
-//                    printf("Checking for path\n");
-//                    detectpath (pointsX, pointsY, mesures, 180, PathW, PathD);
-                    
-                    oriente_nord (mesures, 180, 315, normX, normY);             // Test at -45°
-                    val = map_match (normX, normY, 180, 0xC0, &posx, &posy);    // test dans la chambre zone bureau (C0)
                     if (debug_mode == 1)
-                        printf ("Located at %d,%d\n",posx,posy);
-                    draw_matched_scan (normX, normY, 180, posx, posy);
+                    {
+                        printf ("X = [");
+                        for (x=0; x<180; x++)
+                        {
+                            printf ("%f,",pointsX[x]);
+                        }
+                        printf ("]\n");
+                        printf ("Y = [");
+                        for (x=0; x<180; x++)
+                        {
+                            printf ("%f,",pointsY[x]);
+                        }
+                        printf ("]\n");
+                    }
+                    
+                    if (LocInProgress == 1) // this scan has been triggered as part of localization process
+                    {
+                        // we have to gather the current orientation and the zone we're in
+                        // orientation :
+                        // - we may suppose we're in the last orientation, thus -90°
+                        // - we may register a preferred orientation per zone and force it
+                        // - we may force a specific absolute orientation, and turn a bit if result is not good enough
+                        // - or we may just collect the current one (should be -90° unless blocked during last turn
+                        
+                        if (debug_mode == 1)
+                        {
+                            printf("lauchning map matching computation\n");
+                            printf("zone : %o\n", CurrentWifi.zone);
+                        }
+                        
+                        spread = 50.0;
+                        step = 5.0;        // actually fast, could use step of 5 degrees
+                        cap = 270.0;
+                        
+                        val = find_best_match (cap, spread, step, mesures, 180, &minx, &miny, &minAngle, normX, normY, CurrentWifi.zone);
+                        
+                        if (debug_mode == 1)
+                            printf ("Located at %d,%d - angle %.0f° - correlation %.3f \n",minx,miny, minAngle, val);
+                        draw_matched_scan (normX, normY, 180, minx, miny);
+                        
+                        LocInProgress =0;
+                        
+                    } else { // this scan has been requested for itself
+                        
+                        printf("Checking for objects\n");
+                        detectlines (pointsX, pointsY, mesures, 180, LineW, CovSeuil);
+                        //          printf("Checking for path\n");
+                        //          detectpath (pointsX, pointsY, mesures, 180, PathW, PathD);
+                    }
                 }
                 break;
                 
@@ -412,7 +447,7 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server SCANV\n");
 
                 sprintf (message, "received scan segment %c.", buffer[2] + '0');
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 draw_segment (buffer, buffer[2], C_SCANV);
                 break;
                 
@@ -422,7 +457,7 @@ void interpret_ard (char *buffer, int debug_mode)
                 
                 sprintf (message, "ENG%c%c", buffer[2], buffer[3]);
                 PrimitiveResult = buffer[3];
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_COLOR :
@@ -431,7 +466,7 @@ void interpret_ard (char *buffer, int debug_mode)
 
                 sprintf (message, "COLOR%s", &(buffer[3]));
                 PrimitiveResult = buffer[3];
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             default :
@@ -439,15 +474,15 @@ void interpret_ard (char *buffer, int debug_mode)
                     printf ("    ARD-->Server unknown\n");
                 
                 sprintf(message, "Unknown message %d from Arduino (%d bytes : %s)", (int)buffer[0], strlen(buffer), &(buffer[1]));
-                control_message(MSG_INFO, message);
+                control_message(MSG_INFO, message, 0);
         }
-    
+    return (cmd);
 }
 
 
 
 /* reads message received on command socket (from node.js) */
-int exec_cmd (char *buffer, int debug_mode)
+unsigned char exec_cmd (char *buffer, int debug_mode)
 {
     int val, n, dist;
     char message[64];
@@ -491,7 +526,7 @@ int exec_cmd (char *buffer, int debug_mode)
             else
                 strcat (message, "T");
             strcat (message, "Led");
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 10);
         }
         else if (!strncmp(buffer, "DEBUG", 5))
         {
@@ -506,7 +541,22 @@ int exec_cmd (char *buffer, int debug_mode)
             else
                 strcat (message, "T");
             strcat (message, "DbgMode");
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 0);
+        }
+        else if (!strncmp(buffer, "LEARN", 5))
+        {
+            if (LearningMode == 0)
+                LearningMode = 1;
+            else
+                LearningMode = 0;
+        
+            sprintf (message, "COLOR");
+            if (LearningMode == 0)
+                strcat (message, "F");
+            else
+                strcat (message, "T");
+            strcat (message, "LrnMode");
+            control_message(MSG_INFO, message, 0);
         }
         else if (!strncmp(buffer, "CALCMP", 6))
         {
@@ -525,7 +575,7 @@ int exec_cmd (char *buffer, int debug_mode)
             
             sprintf (message, "COLORxCallibCompas");
             message[5] = CompasCallibration;
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 0);
         }
         else if (!strncmp(buffer, "I2CSCAN", 7))
         {
@@ -539,9 +589,9 @@ int exec_cmd (char *buffer, int debug_mode)
         else if (!strncmp(buffer, "RSCPT", 5))
         {
             if (run_command_script(&(buffer[5])) == 1)
-                control_message(MSG_INFO, "COLORTRunScript");
+                control_message(MSG_INFO, "COLORTRunScript", 10);
             else
-                control_message(MSG_INFO, "COLORFRunScript");
+                control_message(MSG_INFO, "COLORFRunScript", 10);
         }
         else if (!strncmp(buffer, "SSCPT", 5))
         {
@@ -557,26 +607,52 @@ int exec_cmd (char *buffer, int debug_mode)
                 strcat (message, "F");
             
             strcat (message, "wifiref");
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 10);
         }
         else if (!strncmp(buffer, "LOCT", 4))
         {
-            sprintf (message, "COLOR");
+            strcpy (message, "COLOR");
             
-//            if (locate_myself() == 1)
+            if (locate_myself() == 1)
                 strcat (message, "T");
-//            else
-//               strcat (message, "F");
+            else
+                strcat (message, "F");
             
-            strcat (message, "locate");
-            control_message(MSG_INFO, message);
+            if (DebugMode == 1)
+            {
+                printf ("located %s\n", message);
+            }
+            LocInProgress = 1;
+            sleep (1);
+            
+            if (LearningMode == 1)
+            {
+                strcat (message, "lrnlocate");
+                control_message(MSG_INFO, message, 10);
+
+            } else {
+                strcat (message, "locate");
+                control_message(MSG_INFO, message, 10);
+                
+                // now launch a scan to trigger the map matching
+                message[0] = C_SCANH;
+                message[1] = sequence;
+                message[2] = '\0';
+                write_ard (ardfd, message);
+            }
         }
-        else if (!strncmp(buffer, "LOC_OK", 6))
+        else if (!strncmp(buffer, "LOC_OK", 6))  // we get here only if LearnMode was activated
         {
             printf ("Localization approved\n");
             average_and_save_wifi (-1,-1);
+            
+            // now launch a scan to trigger the map matching
+            message[0] = C_SCANH;
+            message[1] = sequence;
+            message[2] = '\0';
+            write_ard (ardfd, message);
         }
-        else if (!strncmp(buffer, "LOC_NOK", 7))
+        else if (!strncmp(buffer, "LOC_NOK", 7)) // we get here only if LearnMode was activated
         {
             printf ("Localization rejected\n");
             PlanClickAction = 1;
@@ -618,7 +694,7 @@ int exec_cmd (char *buffer, int debug_mode)
             rename (logFileName, message);
             strcpy (logFileName, message);
             sprintf (message, "LOGF %s", buffer+4);
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 10);
         }
         else if (!strncmp(buffer, "SANTE", 5))
         {
@@ -626,7 +702,7 @@ int exec_cmd (char *buffer, int debug_mode)
         }
         else if (!strncmp(buffer, "SHTDN", 4))
         {
-            control_message(MSG_INFO, "Shutdown requested");
+            control_message(MSG_INFO, "Shutdown requested", 10);
             message[0] = C_SHTDN;
             message[1] = '\0';
             write_ard (ardfd, message);
@@ -653,7 +729,7 @@ int exec_cmd (char *buffer, int debug_mode)
         else if (!strncmp(buffer, "ENG", 3))
         {
             sprintf(message, "Command Engine was received (%c) value : %s)", buffer[3], &(buffer[4]));
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 10);
             
             message[0] = C_PRI;
             message[1] = sequence;
@@ -697,13 +773,13 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
         else if (!strncmp(buffer, "SCN", 3))
         {
             if (buffer[3] == 'h') {
-                control_message(MSG_INFO, "Command Scan Horizontal was received");
+                control_message(MSG_INFO, "Command Scan Horizontal was received", 0);
                 message[0] = C_SCANH;
                 message[1] = sequence;
                 message[2] = '\0';
                 write_ard (ardfd, message);
             } else {
-                control_message(MSG_INFO, "Command Scan Vertical was received");
+                control_message(MSG_INFO, "Command Scan Vertical was received", 0);
                 message[0] = C_SCANV;
                 message[1] = sequence;
                 message[2] = '\0';
@@ -718,9 +794,9 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
             scriptfd = 0;
             if (buffer[3] == 'F')
             {
-                control_message(MSG_INFO, "COLORFRunScript");
+                control_message(MSG_INFO, "COLORFRunScript", 0);
             } else {
-                control_message(MSG_INFO, "COLORTRunScript");
+                control_message(MSG_INFO, "COLORTRunScript", 0);
             }
         }
         else if (!strncmp(buffer, "GOTO", 4)) // received a click on the plan
@@ -731,8 +807,14 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
                     printf ("Received request to go to x=%d, y=%d\n", x, y);
                 break;
                 
-                case 1 :
+                case 1 :  // we get here only if LearnMode was activated
                     average_and_save_wifi (x,y);
+                    
+                    // now launch a scan to trigger the map matching
+                    message[0] = C_SCANH;
+                    message[1] = sequence;
+                    message[2] = '\0';
+                    write_ard (ardfd, message);
                     PlanClickAction = 0;
                 break;
             }
@@ -742,15 +824,14 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
             printf ("Can't interpret command %s of length %d\n", buffer, strlen(buffer));
         }
 
-    val = 0;
-    return val;
+    return ACTION_NULL; // not used so far
 }
 
-int read_cmd (int fd, char fin)
+unsigned char read_cmd (int fd, char fin)
 {
-    int val, n;
     char buffer[256];
-
+    unsigned char val;
+    int n;
     
     for (n = 0; n < 256; n++)
         buffer[n] = '\0';
@@ -776,11 +857,12 @@ int read_cmd (int fd, char fin)
 /* an input is pending on one of the socket */
 void read_handler (int signum, siginfo_t *si, ucontext_t *unused)
 {
-    int val;
     int fd;
     long event;
     
-
+    printf ("should not execute read_handler anymore\n");
+    return;
+    
     if (si) {
 
         fd = si->si_fd;
@@ -794,7 +876,7 @@ void read_handler (int signum, siginfo_t *si, ucontext_t *unused)
         
         if (fd == (int) NULL) {
             printf ("FD is null\n");
-            control_message(MSG_WARNING, "FD is null");
+            control_message(MSG_WARNING, "FD is null", 0);
         }
         else if (fd == ardfd) {
             read_ard (fd);
@@ -807,12 +889,12 @@ void read_handler (int signum, siginfo_t *si, ucontext_t *unused)
         }
         else {
             printf ("unknown FD received on SIGIO\n");
-            control_message(MSG_WARNING, "unknown FD received on SIGIO");
+            control_message(MSG_WARNING, "unknown FD received on SIGIO", 0);
         }
     }
     else {
         printf ("siginfo is null\n");
-        control_message(MSG_WARNING, "siginfo is null");
+        control_message(MSG_WARNING, "siginfo is null", 0);
     }
 
 }
@@ -822,6 +904,9 @@ void ard_block_mode ()
     int flags;
     struct timeval tv;
 
+    printf ("should not execute ard_block_mode anymore\n");
+    return;
+    
     tv.tv_sec = 3;  // timeout after 3 seconds
     tv.tv_usec = 0;
     
@@ -839,6 +924,9 @@ void ard_async_mode ()
 {
     int flags;
     
+    printf ("should not execute ard_async_mode anymore\n");
+    return;
+    
     if (ArdBlocLevel >= 2)
         ArdBlocLevel--;
     else
@@ -854,7 +942,7 @@ void exit_on_failure (char *reason)
 {
     killpg( process, SIGKILL);
     cleanup_fds ();
-    control_message(MSG_ERROR, reason);
+    control_message(MSG_ERROR, reason, 0);
     exit(1);
 }
 
@@ -875,7 +963,7 @@ void reset_communication (int signum)
 
 int open_cmd_socket (int portno)
 {
-    int fd1, fd2, flags, i=0;
+    int fd1, fd2;
     socklen_t clilen;
     int opt;
     struct sockaddr_in serv_addr, cli_addr;
@@ -907,17 +995,7 @@ int open_cmd_socket (int portno)
     if (fd2 < 0) {
         exit_on_failure ("ERROR on accept");
     }
-    control_message(MSG_INFO, "Command connection accepted");
-
-    // enlever les 5 lignes suivantes tq le fd reste en synchrone
-    // dans la boucle d'attente utiliser poll 
-    
-    //
-//    fcntl(fd2, F_SETOWN, getpid());
-//    fcntl(fd2, F_SETSIG, SIGIO);
-//    flags = fcntl(fd2, F_GETFL);
-//    if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
-//        exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+    control_message(MSG_INFO, "Command connection accepted", 0);
 
     close (fd1);
     return (fd2);
@@ -926,7 +1004,7 @@ int open_cmd_socket (int portno)
 
 int open_ard_socket (int portno)
 {
-    int fd1, fd2, flags, i=0;
+    int fd1, fd2, flags;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int opt;
@@ -952,20 +1030,22 @@ int open_ard_socket (int portno)
     
     // wait and accept a client on the socket
     
-    control_message(MSG_INFO, "Now waiting for Arduino to connect");
+    control_message(MSG_INFO, "Now waiting for Arduino to connect", 0);
     listen(fd1,5);
     clilen = sizeof(cli_addr);
     fd2 = accept(fd1, (struct sockaddr *) &cli_addr, &clilen);
     if (fd2 < 0) {
         exit_on_failure ("ERROR on accept");
     }
-    control_message(MSG_INFO, "Arduino connection accepted");
+    control_message(MSG_INFO, "Arduino connection accepted", 0);
     
-    fcntl(fd2, F_SETOWN, getpid());
+/*
+ fcntl(fd2, F_SETOWN, getpid());
     fcntl(fd2, F_SETSIG, SIGIO);
     flags = fcntl(fd2, F_GETFL);
     if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
         exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+*/
     
     close (fd1);
     return (fd2);
@@ -1064,7 +1144,7 @@ int main(int argc, char *argv[])
         // comment if core dump expected
 //      sigaction (SIGQUIT, &int_action, NULL);
         
-        // setup interruptions : rest communication (SIGUSR1)
+        // setup interruptions : reset communication (SIGUSR1)
         
         rst_action.sa_handler = reset_communication;
         sigemptyset (&rst_action.sa_mask);
@@ -1082,29 +1162,31 @@ int main(int argc, char *argv[])
     
         // setup interruptions : io pending
     
+/*
         io_action.sa_handler = (__sighandler_t)read_handler;
         sigemptyset (&io_action.sa_mask);
         io_action.sa_flags = SA_SIGINFO|SA_NODEFER;
     
         sigaction (SIGIO, &io_action, NULL);
-
+*/
+        
         // initialize reference data
         read_plan ();
         read_wifi_matrixes ();
         
+
         // open command and Arduino sockets
     
-        control_message(MSG_INFO, "Now opening command channel ... ");
         cmdfd = open_cmd_socket (PORT_NUMBER);
-        
+
         // initialiser la couleur du ping à orange
-        control_message(MSG_INFO, "COLORFPing");
+        control_message(MSG_INFO, "COLORFPing", 10);
         sleep (1);
         if (optFileName == 1)
         {
             sprintf (message, "LOGF %s", &(logFileName[5]));
             printf("envoi de -%s-\n",message);
-            control_message(MSG_INFO, message);
+            control_message(MSG_INFO, message, 0);
         }
         
         // dessiner le plan de l'appart
@@ -1113,15 +1195,14 @@ int main(int argc, char *argv[])
         init_appt_distances ();
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
-        log_message(MSG_INFO, "Now opening arduino channel ... ");
         ardfd = open_ard_socket (PORT_NUMBER + 1);
-        
-        control_message(MSG_INFO, "Starting activity ... ");
-        control_message(MSG_INFO, "Please turn the robot 360° on itself upon startup");
+
+        control_message(MSG_INFO, "Starting activity ... ", 0);
+        control_message(MSG_INFO, "Please turn the robot 360° on itself upon startup", 0);
         init_command_mode ();
         strcpy(Expecting, "");
         
-        boucle_attente (ACTION_NULL, 0xff, 1);
+        boucle_attente (ACTION_NULL); // will never exit as nobody sends "ACTION_NULL"
     }
     // Code executed by both parent and child.
     

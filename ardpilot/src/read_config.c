@@ -168,6 +168,8 @@ void read_and_send_config ()
                     sscanf (line, "%*s %d", &PathW);
                 else if (!strncmp(line, "PATHD", 5))
                     sscanf (line, "%*s %d", &PathD);
+                else if (!strncmp(line, "ENDOFPARMS", 10))
+                    message[1] = F_END;
                 
                 if (message[1] != '\0')
                     write_ard (ardfd, message);
@@ -343,7 +345,7 @@ void read_plan()
                         
                     default:
 
-                        sscanf (&(line[start]), "%x-%x-%d", &piece, &zone, &wifi_ref);
+                        sscanf (&(line[start]), "%x-%o-%d", &piece, &zone, &wifi_ref);
                         Appartement[lines][cellule].piece = (unsigned char) (piece * 16 + zone);
 
                         break;
@@ -611,4 +613,20 @@ void close_wifi_matrix_file (FILE *fd)
 {
     fprintf (fd, "\n");
     fclose (fd);
+}
+
+void rename_matrix ()
+{
+    char filename[256], oldname[256];
+    char *extdot;
+
+    strcpy (filename, CONFDIR);
+    strcat (filename, "/");
+    strcat (filename, MATRIX_FILE);
+    
+    strcpy (oldname, filename);
+    extdot = rindex (oldname, '.');
+    strcat (extdot, ".old");
+
+    rename (filename, oldname);
 }

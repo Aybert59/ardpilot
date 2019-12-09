@@ -96,4 +96,6 @@
 #define F_ZAMIN       0x3a
 #define F_ZAMAX       0x3b
 
+#define F_END         0xfe
+
 // end of grammar

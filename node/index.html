@@ -367,7 +367,13 @@
                 socket.on('color', function(message) {
 
                       var bouton = message.toString().substring(1,message.length);
-                      
+                      var learn = 0;
+                          
+                      if (bouton == "lrnlocate") {
+                          bouton = "locate";
+                          learn = 1;
+                      }
+                          
                       if (message.charAt(0) == 'T') {
                         color='LightGreen';
                       } else {
@@ -376,8 +382,9 @@
                     
                       document.getElementById(bouton).style.background=color;
                           
-                      if (bouton == "locate") {
+                      if (learn == 1) {
                         if (message.charAt(0) == 'T') {
+
                           var rep = confirm("Is localization correct ?\nIf not, press Cancel and then\nthe correct location in the plan");
                           if(rep == true)
                           {
@@ -597,7 +604,7 @@
                     var couleur = msg.slice (0, delim);
                     var donnees = msg.slice (delim+1);
                           
-                    alert ("couleur -" + couleur + "-");
+                    // alert ("couleur -" + couleur + "-");
                           
                     var dataset = donnees.split(' ');
                     var series = plan.get('mapscan');
@@ -609,7 +616,7 @@
                         cell = dataset[i].split(",").map(Number);
                         series.addPoint (cell, false);
                     }
-                                          
+                    series.setVisible (true);
                     plan.redraw();
                 });
                                 
@@ -721,6 +728,11 @@
                 socket.emit('cmd', commande);
             }
         
+            function do_locate (obj, commande, couleur) {
+                loadit(document.getElementById('TabPlan'));
+                do_cmd_color (obj, commande, couleur);
+            }
+                                  
             function do_cmd_code (obj, commande, code) {
                 socket.emit('cmd', commande + code);
             }
@@ -840,7 +852,7 @@
                 <td> <center> <input type="button" value="Top WIFI"
                     onClick="do_cmd_color(this, 'TOPW','SandyBrown')" title='Find 10 strongest SSIDs' id="TopWifi" /> </td>
                 <td colspan=2> <center> <input type="button" value="Locate"
-                    onClick="do_cmd_color(this, 'LOCT','SandyBrown')" title='Locate among WIFI matrices' id="locate" /> </td>
+                    onClick="do_locate(this, 'LOCT','SandyBrown')" title='Locate among WIFI matrices' id="locate" /> </td>
             </tr>
             <tr>
                 <td > <div id="ArdVoltMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
@@ -851,9 +863,9 @@
     
 <div id="menu">
   <ul id="onglets">
-        <li class="active"><a href="#1" rel="InOnglet1" onClick="loadit(this)">Scan</a></li>
-        <li><a href="#2" rel="InOnglet2" onClick="loadit(this)">Plan </a></li>
-        <li><a href="#3" rel="InOnglet3" onClick="loadit(this)">Settings</a></li>
+        <li class="active"><a href="#1" rel="InOnglet1" onClick="loadit(this)" id="TabScan">Scan</a></li>
+        <li><a href="#2" rel="InOnglet2" onClick="loadit(this)" id="TabPlan">Plan </a></li>
+        <li><a href="#3" rel="InOnglet3" onClick="loadit(this)" id="TabSet">Settings</a></li>
   </ul>
 </div>
 
@@ -985,6 +997,8 @@
             <td> <input type="button" value="Load Config" id="Config" /> </td>
             <td>  <input type="button" value="Debug Mode" id="DbgMode"
                 onClick="do_cmd('DEBUG')" title="Toggles debug mode" style="background-color:SandyBrown"/> </td>
+            <td>  <input type="button" value="Learning Mode" id="LrnMode"
+                onClick="do_cmd('LEARN')" title="Toggles learning mode" style="background-color:SandyBrown"/> </td>
             <td>  <input type="button" value="Callibrate compass" id="CallibCompas"
                 onClick="do_cmd('CALCMP')" title="Toggles compass callibration mode" style="background-color:SandyBrown"/> </td>
             <td>  <input type="button" value="i2c scan" id="i2cscan" onClick="do_cmd('I2CSCAN')" title="scans the I2C bus"/> </td>

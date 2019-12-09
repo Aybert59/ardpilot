@@ -41,20 +41,22 @@ struct wifiref
 
 // prototypes
 
-void control_message (char action, char *message);
-int exec_cmd (char *buffer, int debug_mode);
+void control_message (char action, char *message, int attente);
+unsigned char exec_cmd (char *buffer, int debug_mode);
 int write_ard (int fd, char *message);
-void interpret_ard (char *buffer, int debug_mode);
+unsigned char read_ard (int fd);
+unsigned char interpret_ard (char *buffer, int debug_mode);
 void exit_on_failure (char *reason);
 void init_command_mode ();
 void ard_block_mode ();
 void ard_async_mode ();
 int open_cmd_socket (int portno);
-int read_cmd (int fd, char fin);// from environment.c
-void check_free_mem (unsigned char sequence);
+unsigned char read_cmd (int fd, char fin);// from environment.c
+int bloc_get_memory_free ();
 void check_compas (unsigned char sequence);
 void check_voltage ();
-void get_top_wifi (char sequence);
+void check_free_mem ();
+void get_top_wifi ();
 void check_wifi_environment (char sequence);
 int get_health ();
 int analyze_environment ();
@@ -79,6 +81,7 @@ FILE *open_wifi_matrix_file (int MatRef);
 void close_wifi_matrix_file (FILE *fd);
 void init_appt_distances ();
 void read_and_send_config ();
+void rename_matrix ();
 
 // from commandes.c
 int oriente_robot (int cap_souhaite, int tolerance);
@@ -90,5 +93,5 @@ int run_command_script(char *ScriptName);
 // from calculs.c
 double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy);
 void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[]);
-
+double find_best_match (double cap, double spread, double step, double mesures[], int taille, int *minx, int *miny, double *minAngle, double minNormX[], double minNormY[], unsigned char piece);
 #endif /* ardpilot_h */

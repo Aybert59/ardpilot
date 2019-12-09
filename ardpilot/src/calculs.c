@@ -276,7 +276,7 @@ float distance_matrix (struct wifiref *CurrentWifi, struct wifiref *RefWifi)
 
 void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[])
 {
-    // points contains the detected distances left (0°) to right (180°)
+    // points contains the detected distances left (-90°) to right (+90°)
     // knowing that the robot heads to "orientation", calculate x & y coordinates north oriented
     
     int i;
@@ -295,6 +295,47 @@ void oriente_nord (double points[], int taille, int orientation, double xnorm[],
      }
 }
 
+double find_best_match (double cap, double spread, double step, double mesures[], int taille, int *minx, int *miny, double *minAngle, double minNormX[], double minNormY[], unsigned char piece) // finds a best map matching allowing a tolerance on the robot orientation
+{
+    double normX[180];
+    double normY[180];
+    int posx, posy, i;
+    double val, minval;
+    double angle;
+    
+    
+    minval = 99999;
+                          
+    for (angle = cap - spread; angle <= cap + spread; angle += step)
+    {
+        if (DebugMode == 1)
+            printf("orientation : %.0f°\n", angle);
+                                                  
+            oriente_nord (mesures, 180, angle, normX, normY);
+            val = map_match (normX, normY, 180, piece, &posx, &posy); // finds the best match for this orientation
+                              
+            if (val < minval)
+            {
+                // this match is better than the ones before
+                if (DebugMode == 1)
+                    printf("best match found %.0f°\n", angle);
+                                  
+                minval = val;
+                *minx = posx;
+                *miny = posy;
+                *minAngle = angle;      // may be used to ajust the compas value ?
+                                  
+                for (i=0; i<180; i++)
+                {
+                    minNormX[i] = normX[i];
+                    minNormY[i] = normY[i];
+                }
+            }
+    }
+
+    return minval;
+}
+
 double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy)
 {
     // points have been oriented north
@@ -305,14 +346,10 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
     int xd, yd, p;
     double distance = 20000.0 * 180; /// max value for a whole scan
     double value;
-//*** FILE *fd;
-
     
-//*** fd = fopen ("/home/olivier/projets/ardpilot/debug_mapmatch.csv", "w");
-    
-    if (DebugMode == 1)
-        for (p=0; p<taille; p++)
-            printf ("point %.0f,%.0f\n", x[p], y[p]);
+//    if (DebugMode == 1)
+//        for (p=0; p<taille; p++)
+//            printf ("point %.0f,%.0f\n", x[p], y[p]);
     
     for (i=0; i<APPT_L; i++)
     {
@@ -355,11 +392,8 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
                     *posy = i;
                 }
             }
-//*** fprintf (fd, "%.0f ", value);
         }
-//*** fprintf (fd, "\n");
     }
-//*** fclose (fd);
     return (sqrt(distance));
 
 }
