@@ -47,7 +47,7 @@ void init_command_mode ()
 }
 
 
-void boucle_attente (unsigned char parametre)
+int boucle_attente (unsigned char parametre, int attente, int retries)
 // loops until parameter is received.
 // if parameter == ACTION_NULL then will never exits - as nobody sends this parameter
 {
@@ -55,11 +55,16 @@ void boucle_attente (unsigned char parametre)
     int ret;
     fd_set rfds;
     unsigned char val = ACTION_NULL;
-    
+    struct timeval timeout;
+    int retcode = 0;
+    int count = retries;
+
+    timeout.tv_sec = 0;
+    timeout.tv_usec = attente * 1000; // attente in milliseconds
 
     while ((parametre == ACTION_NULL) || (val != parametre))
     {
-        // attente soit du retour de la séquence demandée, soit ecrasée par une commande de l'interface graphique
+        // attente d'avoir reçu le paramètre demandé
 
         // initialize file descriptors table
         FD_ZERO(&rfds);
@@ -70,68 +75,52 @@ void boucle_attente (unsigned char parametre)
         if (scriptfd > 0)
             FD_SET(scriptfd, &rfds);
 
+        if (attente == 0)
+            ret = select(FD_SETSIZE, &rfds, NULL, NULL, NULL); // wait forever
+        else
+            ret = select(FD_SETSIZE, &rfds, NULL, NULL, &timeout);
         
-        ret = select(FD_SETSIZE, &rfds, NULL, NULL, NULL); // wait forever
-
-
         if (ret == -1)
-             printf ("error on select()");
- //        else if (ret)
- //            printf("Data is available now.\n");
-             /* FD_ISSET(0, &rfds) will be true. */
- //        else
- //            printf("No data within timeout period\n");
-        
-
-        if (FD_ISSET(cmdfd, &rfds))
-            val = read_cmd (cmdfd, '\0');
-        if (FD_ISSET(ardfd, &rfds))
-            val = read_ard (ardfd); // in this case val equals the command received from the robot
-        if (FD_ISSET(scriptfd, &rfds))
-            val = read_cmd (scriptfd, '\n');
-        
-    }
-}
-
-char attente_bloquante (unsigned char parametre, unsigned char sequence) // a fusionner avec la boucle ppale, loopcnt en static
-{
-    char buffer[64];
-    unsigned char cmd, len;
-    int j, n;
-    int flags;
-    
-     
-    buffer[0] = ACTION_NULL;
-printf ("wait ard to send me expected param\n");
-    
-    while (buffer[0] != parametre)
-    {
-        n = read(ardfd, &len, 1);
-        if (n > 0)
         {
-            for (j=0; j<len; j++)
-                read (ardfd, &(buffer[j]), 1);
-            buffer[j] = '\0';
+            printf ("error on select()");
+            // let's loop infinitely, user will shutdown the system himself (something weird happened)
+        }
+        else if (ret)
+        {
+            // printf("Data is available now.\n");
+            // FD_ISSET(0, &rfds) will be true.
             
-            if (buffer[0] == parametre)
+            if (FD_ISSET(cmdfd, &rfds))
+                val = read_cmd (cmdfd, '\0');
+            if (FD_ISSET(ardfd, &rfds))
+                val = read_ard (ardfd); // in this case val equals the command received from the robot
+            if (FD_ISSET(scriptfd, &rfds))
+                val = read_cmd (scriptfd, '\n');
+        }
+        else if (ret == 0)
+        {
+            printf("No data within timeout period\n");
+            if (count == 0)
+            {
+                // number of retries has expired
+                retcode = 1;
                 break;
+            }
             else
-                interpret_ard (buffer, 1);
-         }
+                count--;
+        }
+        
     }
-printf ("got it %c!\n", buffer[3]);
     
-    
-    return (buffer[3]);  // renvoie T ou F mais seulement dans le cas C_COLOR
+    return retcode;
 }
-
 
 int bloc_get_top_wifi ()
 {
-printf("get top wifi\n");
-         
     get_top_wifi ();
-    boucle_attente (C_TOPWIFI);
+    
+    while (boucle_attente (C_TOPWIFI, 5000, 0))
+        get_top_wifi ();
     
     return 1;
 }
@@ -139,54 +128,19 @@ printf("get top wifi\n");
 int bloc_get_memory_free ()
 {
     check_free_mem ();
-    boucle_attente (C_MEM);
-    
-    // afficher les parametres relevés
-    printf ("%d\n",MemoryFree);
+    while (boucle_attente (C_MEM, 2000, 0))
+        check_free_mem ();
     
     return MemoryFree;
 }
 
 int bloc_get_compas ()
 {
-    unsigned char sequence;
-    int c, x, i, j, n;
-    unsigned char len;
-    char buffer[64];
-    int flags;
-    extern int compas_correction[];
-    
-    sequence = Sequence[C_CMP] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-        sequence++;
-    
-    check_compas (sequence);
-    
-    
-    buffer[0] = ACTION_NULL;
-    while (buffer[0] != C_CMP)
-    {
-        n = read(ardfd, &len, 1);
-        if (n > 0) {
-            for (j=0; j<len; j++)
-                read (ardfd, &(buffer[j]), 1);
-            buffer[j] = '\0';
-            if (buffer[0] == C_CMP)
-            {
-                sscanf(&(buffer[2]), "%d", &x);
-                c = compas_correction[x];
-            } else {
-                interpret_ard (buffer, 1);
-            }
-        } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-            printf ("Read timeout, resending\n");
-            check_compas (sequence);
-        }
-    }
-    
-    
-    printf("current orientation brute %d corrigée %d\n",x,c);
-    return c;
+    check_compas ();
+    while (boucle_attente (C_CMP, 2000, 0))
+        check_compas ();
+           
+    return Compas;
 }
 
 char bloc_primitive_avant (int vitesse, int distance) // distance en mm
@@ -211,7 +165,7 @@ duree = distance;
     sprintf (&(buffer[3]), "%d %u",vitesse,duree);
     
     write_ard (ardfd, buffer);
-    boucle_attente (C_PRI);
+    boucle_attente (C_PRI, 0, 0);
     
     // afficher les parametres relevés
     
@@ -228,7 +182,8 @@ char bloc_primitive_spot_turn (int cap_demande) // cap corrigé en ° (0 = boule
     unsigned char sequence;
     char buffer[64];
     int cap;
-    char outcome;
+
+    extern char PrimitiveResult;
     
     sequence = Sequence[C_PRI] + 1;
     if ((sequence == '*') || (sequence == 0x00))
@@ -241,16 +196,16 @@ char bloc_primitive_spot_turn (int cap_demande) // cap corrigé en ° (0 = boule
     sprintf (&(buffer[3]), "%d",cap);
     
     write_ard (ardfd, buffer);
-    outcome = attente_bloquante (C_COLOR, sequence);
-    
+    boucle_attente (C_COLOR, 0, 0);
+ 
     // afficher les parametres relevés
     
-    if (outcome == 'T')
+    if (PrimitiveResult == 'T')
         printf ("Move completed\n");
     else
         printf ("Move blocked\n");
     
-    return outcome;
+    return PrimitiveResult;
 }
 
 int dif_angle(int x, int y)

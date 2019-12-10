@@ -56,7 +56,7 @@ int NoInterrupt = 0;
 
 extern void detectlines (double *, double *, double *, int, int, float);
 extern void detectpath (double *, double *, double *, int, int, int);
-extern void boucle_attente (unsigned char);
+
 
 char logFileName[64];
 char Expecting[16];
@@ -711,7 +711,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
         }
         else if (!strncmp(buffer, "CMP", 3))
         {
-            check_compas (sequence);
+            check_compas ();
         }
         else if (!strncmp(buffer, "CFG", 3))
         {
@@ -1202,7 +1202,7 @@ int main(int argc, char *argv[])
         init_command_mode ();
         strcpy(Expecting, "");
         
-        boucle_attente (ACTION_NULL); // will never exit as nobody sends "ACTION_NULL"
+        boucle_attente (ACTION_NULL, 0, 0); // will never exit as nobody sends "ACTION_NULL"
     }
     // Code executed by both parent and child.
     

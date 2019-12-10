@@ -19,5 +19,5 @@ ALL_OBJS=$(OBJ)/$(PROJET).o \
 $(BIN)/$(PROJET) : $(ALL_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(ALL_OBJS) $(LDFLAGS)
 
-$(OBJ)/%.o : $(SRC)/%.c
+$(OBJ)/%.o : $(SRC)/%.c ardpilot.h
 	$(CC) $(CFLAGS) -o $@ $<

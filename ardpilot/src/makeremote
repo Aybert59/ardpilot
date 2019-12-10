@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ssh -Y olivier@192.168.1.3 'xterm -fn "-adobe-courier-medium-r-*-*-12-*-*-*-*-*-*-*" /home/olivier/projets/ardpilot/src/compileremote'

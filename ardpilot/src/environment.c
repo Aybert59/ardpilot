@@ -65,12 +65,12 @@ void check_free_mem ()
 }
 
 
-void check_compas (unsigned char sequence)
+void check_compas ()
 {
     char message[4];
     
     message[0] = C_CMP;
-    message[1] = sequence;
+    message[1] = '\1';
     message[2] = '\0';
     write_ard (ardfd, message);
 }

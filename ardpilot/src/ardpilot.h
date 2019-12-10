@@ -4,7 +4,6 @@
 //
 //  Created by Olivier Messiant on 28/11/2016.
 //
-//
 
 #ifndef ardpilot_h
 #define ardpilot_h
@@ -53,7 +52,7 @@ void ard_async_mode ();
 int open_cmd_socket (int portno);
 unsigned char read_cmd (int fd, char fin);// from environment.c
 int bloc_get_memory_free ();
-void check_compas (unsigned char sequence);
+void check_compas ();
 void check_voltage ();
 void check_free_mem ();
 void get_top_wifi ();
@@ -84,6 +83,7 @@ void read_and_send_config ();
 void rename_matrix ();
 
 // from commandes.c
+int boucle_attente (unsigned char parametre, int timeout, int retries);
 int oriente_robot (int cap_souhaite, int tolerance);
 int bloc_get_top_wifi ();
 int locate_myself ();
