@@ -211,6 +211,8 @@ io.sockets.on('connection', function (socket) {
               socket.emit('volt',chaine.substring(4));
         } else if (chaine.indexOf('MEM') == 0) {
               socket.emit('mem',chaine.substring(3));
+        } else if (chaine.indexOf('TEMP') == 0) {
+              socket.emit('temp',chaine.substring(4));
         } else if (chaine.indexOf('SR1') == 0) {
               socket.emit('sr1',chaine.substring(3));
         } else if (chaine.indexOf('SR2') == 0) {
@@ -231,6 +233,9 @@ io.sockets.on('connection', function (socket) {
         } else if (chaine.indexOf('DRAWMAPSCAN') >= 0) {
               n = chaine.indexOf('DRAWMAPSCAN');
               socket.emit('drawmapscan',chaine.substring(n+11));
+        } else if (chaine.indexOf('DRAWMAPPATH') >= 0) {
+              n = chaine.indexOf('DRAWMAPPATH');
+              socket.emit('drawmappath',chaine.substring(n+11));
         } else if (chaine.indexOf('CLEARPLAN') >= 0) {
               socket.emit('ClearPlan',chaine.substring(n+8));
         } else if (chaine.indexOf('DRAWCOLOR') >= 0) {
@@ -278,7 +283,6 @@ io.sockets.on('connection', function (socket) {
             client.write('SCN' + message + '\0');
     });
     socket.on('goto', function (message) {
-            console.log('Message reçu : ' + message);
             client.write('GOTO' + message + '\0');
 
     });

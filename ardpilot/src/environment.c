@@ -84,26 +84,30 @@ void check_voltage ()
     write_ard (ardfd, message);
 }
 
+void check_ping ()
+{
+    char message[4];
+    
+    message[0] = C_PING;
+    message[1] = '\0';
+    write_ard (ardfd, message);
+}
+
 int get_health ()
 {
-    int n; // une fois que le ping récupère tout, juste envoyer un ping.
-    // récupérer adresse IP
-    
-    // récuperer free mem
+    int Compas;
+    char message[32];
+    // récupérer adresse IP ?
     
     bloc_get_memory_free ();
-    // ne mache pas : block_check_free_mem ('*');
- 
-//    sleep (1);
-    // récupérer vitesse des moteurs
+    Compas = bloc_get_compas ();
+    bloc_check_voltage ();
+    bloc_check_ping();
     
-    // récupérer charge batterie
-    check_voltage ();
-
-    // récupérer orientation boussole
-    
-    // mesurer durée boucle vide / et boucle moyenne
-    
+    sprintf (message, "AXY %d", Compas);
+    control_message(MSG_INFO, message, 10);
+    // récupérer vitesse des moteurs, position des servos ?
+   
      return 0;
 }
 

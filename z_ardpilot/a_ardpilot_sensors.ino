@@ -201,6 +201,18 @@ long measure_distance (int n) {
   else 
     d = (us / 58.0) - 2 ; // 58 pour vitesse du son ; 2 cm longueur de l'autre capeur qui dépasse
 
+  if (DebugMode == true)
+  {
+    ecran.clear();
+    ecran.setPowerSave(0);
+    ecran.print (li);
+    ecran.print ("\n");
+    ecran.print (us);
+    ecran.print ("\n");
+    ecran.print (d);
+    ecran.print ("\n");
+  }
+  
   return d;
   
 }
@@ -213,6 +225,7 @@ void get_distance (byte side) {
   obuffer[0] = side;
   ltoa (measure_distance (3), &(obuffer[1]), 10);
   wifi_write ();
+
 
 }
 

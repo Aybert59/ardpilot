@@ -124,10 +124,14 @@ void read_and_send_config ()
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
-    char message[32];
+    char message[32], msg[32];
     static int first_time = 1;
     int count = 0;
     
+    extern int DebugMode;
+    extern int LearningMode;
+    
+
     if (first_time == 1)
     {
         sleep (2);  // attendre que le robot soit pret a lire
@@ -151,7 +155,34 @@ void read_and_send_config ()
                 if (!strncmp(line, "SRV1", 4))
                     message[1] = F_SRV1;
                 else if (!strncmp(line, "DEBUG", 5))
+                {
+                    DebugMode = 0;
                     message[1] = F_DEBUG;
+                    if (!strcmp (&(message[2]), "true"))
+                        DebugMode = 1;
+                    
+                    sprintf (msg, "COLOR");
+                    if (DebugMode == 0)
+                        strcat (msg, "F");
+                    else
+                        strcat (msg, "T");
+                    strcat (msg, "DbgMode");
+                    control_message(MSG_INFO, msg, 10);
+                }
+                else if (!strncmp(line, "LEARN", 5))
+                {
+                    LearningMode = 0;
+                    if (!strcmp (&(message[2]), "true"))
+                        LearningMode = 1;
+
+                    sprintf (msg, "COLOR");
+                    if (LearningMode == 0)
+                        strcat (msg, "F");
+                    else
+                        strcat (msg, "T");
+                    strcat (msg, "LrnMode");
+                    control_message(MSG_INFO, msg, 10);
+                }
                 else if (!strncmp(line, "DMIN", 4))
                     message[1] = F_DMIN;
                 else if (!strncmp(line, "AJUST", 5))
@@ -183,6 +214,8 @@ void read_and_send_config ()
     }
     
     read_compas_correction();
+    get_health();
+    bloc_get_top_wifi (); // we have to do it once
 }
 
 void init_appt_distances ()

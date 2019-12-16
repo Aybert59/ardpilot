@@ -85,6 +85,14 @@ void manage_command (byte len) {
     digitalWrite (LED, v);
     break;
 
+  case C_DEBUG:
+  
+    if (ibuffer[1] == 1)
+      DebugMode = false;
+    else
+      DebugMode = true;
+    break;
+
 /*  case C_CALCMP:
   
     if (ibuffer[1] == 'T')
@@ -184,7 +192,7 @@ void manage_command (byte len) {
         else
           DebugMode = false;
       break;
-/*      case F_XMMIN :
+ /*      case F_XMMIN :
         xmmin = atoi(&(ibuffer[2])); 
       break;
       case F_XMMAX :

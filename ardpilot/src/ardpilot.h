@@ -55,6 +55,7 @@ int bloc_get_memory_free ();
 void check_compas ();
 void check_voltage ();
 void check_free_mem ();
+void check_ping ();
 void get_top_wifi ();
 void check_wifi_environment (char sequence);
 int get_health ();
@@ -69,7 +70,7 @@ void draw_segment (char *buffer, char segment, char orientation);
 void draw_line (int xs, int ys, int xe, int ye);
 void draw_matched_scan (double x[], double y[], int taille, int posx, int posy);
 void display_room_from_matrix (unsigned int zone, char *color);
-
+void draw_path (int x[], int y[], int taille);
 
 // from read_config
 void read_plan();
@@ -86,6 +87,9 @@ void rename_matrix ();
 int boucle_attente (unsigned char parametre, int timeout, int retries);
 int oriente_robot (int cap_souhaite, int tolerance);
 int bloc_get_top_wifi ();
+int bloc_check_voltage ();
+int bloc_check_ping ();
+int bloc_get_compas ();
 int locate_myself ();
 int stop_command_script(char *ScriptName);
 int run_command_script(char *ScriptName);
@@ -94,4 +98,9 @@ int run_command_script(char *ScriptName);
 double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy);
 void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[]);
 double find_best_match (double cap, double spread, double step, double mesures[], int taille, int *minx, int *miny, double *minAngle, double minNormX[], double minNormY[], unsigned char piece);
+int find_path_to (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
+
+int get_path (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
+int lee_expansion (int ApptPath[][APPT_W], int level, int CurX, int CurY, int ToX, int ToY);
+
 #endif /* ardpilot_h */

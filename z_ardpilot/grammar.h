@@ -42,6 +42,8 @@
 #define C_LIDAR       0x18
 #define C_CALCMP      0x19  // compass callibration
 #define C_I2CSCAN     0x1a 
+#define C_DEBUG       0x1b
+
 
 #define C_COLOR       0xfe // not a control. Pass directly a color change for an object in the web interface
 
@@ -70,6 +72,7 @@
 #define F_INIT        0xff
 
 #define F_DEBUG       0x01
+#define F_LEARN       0x02
 
 #define F_SRV1        0x10
 #define F_PNGNUM      0x11

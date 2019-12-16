@@ -125,12 +125,12 @@ void draw_plan ()
     // murs : envoyer en plusieurs fois
 
 
-    for (i=0;i<193;i++)
+    for (i=0;i<APPT_L;i++)
     {
         strcpy (message,"DRAWMURS  ");
-        for (j=0;j<93;j++)
+        for (j=0;j<APPT_W;j++)
         {
-            if (Appartement[i * 93 + j].piece == 0x0F)
+            if (Appartement[i * APPT_W + j].piece == 0x0F)
             {
                 sprintf (temp, "%d,%d ", j,i);
                 strcat (message, temp);
@@ -189,6 +189,43 @@ void draw_matched_scan (double x[], double y[], int taille, int posx, int posy)
                 printf ("%s-\n",message);
         }
     }
+}
+
+void draw_path (int x[], int y[], int taille)
+{
+    char message[400];
+    char temp[10];
+    int i, j, s;
+    int point;
+    
+    if (DebugMode == 1)
+    {
+        for (i=0;i<taille-1;i++)
+            printf ("%d,%d\n",x[i],y[i]);
+    }
+    
+    s = taille / 6;
+    for (j=0; j<7; j++)
+    {
+        point = 0;
+        strcpy (message,"DRAWMAPPATH Green  ");
+        for (i=0; i<s; i++)
+        {
+            if ((j*s +i) < taille-1)
+            {
+                point = 1;
+                sprintf (temp, "%d,%d ", x[j*s +i], y[j*s +i]);
+                strcat (message, temp);
+            }
+        }
+        if (point == 1)
+        {
+            control_message(MSG_INFO, message, 10);
+            if (DebugMode == 1)
+                printf ("%s-\n",message);
+        }
+    }
+    
 }
 
 void display_room_from_matrix (unsigned int zone, char *color)

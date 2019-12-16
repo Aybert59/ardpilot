@@ -11,10 +11,12 @@
         <link rel="stylesheet" type="text/css" href="index.css?v3" />
         <link rel="stylesheet" type="text/css" href="highcharts.css" />
         
-        <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+        <script src="http://code.jquery.com/jquery-2.2.4.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script src='nouislider.js'></script>
         <script src="wNumb.js"></script>
+        <script src="js_display.js"></script>
         <script src="https://code.highcharts.com/highcharts.js"></script>
         <script src="https://code.highcharts.com/highcharts-more.js"></script>
         <script src="https://code.highcharts.com/modules/exporting.js"></script>
@@ -177,6 +179,7 @@
                 // When the DOM is ready, but not yet fully displayed
                 var charth; // globally available
                 var chartv;
+                var TempDisplay;
                 
                                 
             //builds the compass
@@ -317,6 +320,9 @@
                                     series.show ();
                                         })
                                 
+                socket.on('temp', function(message) {
+                          TempDisplay.draw (parseInt(message));
+                                        })
                 socket.on('sr1', function(message) {
                                           Slider1.set (parseInt(message));
                                           })
@@ -535,6 +541,7 @@
                                 
                 plan = Highcharts.chart('plan', {
                             chart: {type: 'scatter', zoomType: 'xy', animation: false,
+                                        
                                 events: {
                                     click: function (event) {
                                         socket.emit('goto',  Highcharts.numberFormat(event.xAxis[0].value, 0) + ' ' +
@@ -543,14 +550,13 @@
                                 }
                             },
                             credits: {enabled: false},
+                            tooltip: { enabled: false },
                             title: {text: 'Appartement'},
                             xAxis: { min: -1, max: 93, visible: false },
                             yAxis: { min: -1, max: 193, visible: false, reversed: true },
-                            plotOptions: {
-                                        scatter: {
-                                                tooltip: { pointFormat: '{point.x} dm, {point.y} dm' }
-                                            }
-                            },
+                            //plotOptions: {  scatter: {
+                            //                    tooltip: { pointFormat: '{point.x} dm, {point.y} dm' }
+                            //                } },
                             
                             series: [{
                                     data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation sinon ne s'affiche pas
@@ -578,11 +584,23 @@
                                      enabled: true,
                                      symbol: 'circle',
                                      radius: 1
+                                     }},
+                                     {
+                                     data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
+                                     visible: false, showInLegend: true,
+                                     id: 'path', name: 'Path',
+                                     marker: {
+                                     enabled: true,
+                                     symbol: 'circle',
+                                     radius: 1
                                      }
                                      
                             }],
                 });
-  
+                                
+                TempDisplay = new js_display("Temperature",  3,  25, "cyan"  );
+                
+                                
                 socket.on('drawmurs', function(message) {
                                           
                     var dataset = message.split(' ');
@@ -609,13 +627,36 @@
                     var dataset = donnees.split(' ');
                     var series = plan.get('mapscan');
                         
-                    series.setOptions ({color: couleur});
+                    //series.setOptions ({color: couleur});
                                           
                     for (var i=0; i < dataset.length; i++)
                     {
                         cell = dataset[i].split(",").map(Number);
                         series.addPoint (cell, false);
                     }
+                    
+                    series.update ({ color: couleur });
+                    series.setVisible (true);
+                    plan.redraw();
+                });
+                
+                socket.on('drawmappath', function(message) {
+                                                          
+                    var msg = message.trim();
+                    var delim = msg.indexOf(' ');
+                    var couleur = msg.slice (0, delim);
+                    var donnees = msg.slice (delim+1);
+                                          
+                    var dataset = donnees.split(' ');
+                    var series = plan.get('path');
+                                        
+                    for (var i=0; i < dataset.length; i++)
+                    {
+                        cell = dataset[i].split(",").map(Number);
+                        series.addPoint (cell, false);
+                    }
+                                    
+                    series.update ({ color: couleur });
                     series.setVisible (true);
                     plan.redraw();
                 });
@@ -835,11 +876,11 @@
         
         <tbody>
             <tr>
-                <td colspan="3" rowspan="3"> <center>
+                <td colspan="3" rowspan="4"> <center>
                     <textarea readonly id="TextBox" cols="80" rows="18" style="border-width:1px; border-style:groove; background-color:#F8E0E0">
                      </textarea></center>
                 </td>
-                <td rowspan="3"> <center> <div id="ArdCompass"
+                <td rowspan="4"> <center> <div id="ArdCompass"
                     onClick="do_cmd('CMP')" title="Click to update" style="width: 200px; height: 200px; margin: 0 auto"></div> </center> </td>
                 <td> <center> <input type="button" value="Front Dist" id="DistG"
                     onClick="do_cmd('DST')" title="Measure distance from turret Lidar"/> </center> </td>
@@ -855,8 +896,12 @@
                     onClick="do_locate(this, 'LOCT','SandyBrown')" title='Locate among WIFI matrices' id="locate" /> </td>
             </tr>
             <tr>
-                <td > <div id="ArdVoltMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
-                <td colspan=2> <div id="ArdMemMeter" style="width: 200px; height: 200px; margin: 0 auto"> </div> </td>
+                <td > <center> <div id="ArdVoltMeter" style="width: 200px; height: 130px; margin: 0 auto"> </div> </td>
+                <td colspan=2> <center> <div id="ArdMemMeter" style="width: 200px; height: 130px; margin: 0 auto"> </div> </td>
+            </tr>
+            <tr>
+            <td> <div style="text-align: right">Temp </div> </td>
+            <td> <center> <div id="Temperature" style="width: 80px; height: 25px; margin: 0 auto"> </div> </td>
             </tr>
         </tbody>
     </table>

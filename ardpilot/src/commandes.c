@@ -117,30 +117,43 @@ int boucle_attente (unsigned char parametre, int attente, int retries)
 
 int bloc_get_top_wifi ()
 {
-    get_top_wifi ();
-    
-    while (boucle_attente (C_TOPWIFI, 5000, 0))
+    do
         get_top_wifi ();
+    while (boucle_attente (C_TOPWIFI, 5000, 0));
     
     return 1;
 }
 
 int bloc_get_memory_free ()
 {
-    check_free_mem ();
-    while (boucle_attente (C_MEM, 2000, 0))
+    do
         check_free_mem ();
+    while (boucle_attente (C_MEM, 2000, 0));
     
     return MemoryFree;
 }
 
 int bloc_get_compas ()
 {
-    check_compas ();
-    while (boucle_attente (C_CMP, 2000, 0))
+    do
         check_compas ();
+    while (boucle_attente (C_CMP, 2000, 0));
            
     return Compas;
+}
+
+int bloc_check_voltage ()
+{
+    do
+        check_voltage ();
+    while (boucle_attente (C_BAT, 2000, 0));
+}
+
+int bloc_check_ping ()
+{
+    do
+        check_ping ();
+    while (boucle_attente (C_PING, 2000, 0));
 }
 
 char bloc_primitive_avant (int vitesse, int distance) // distance en mm

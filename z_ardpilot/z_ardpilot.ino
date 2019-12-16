@@ -175,14 +175,17 @@ void setup() {
 
   Wire.begin();
   begin_ecran ();
-  ecran.print (F("Hello ...\n"));
+  ecran.print (F("Hello "));
  
   Serial.begin(9600); // start the serial connection to the shield
-
+  ecran.print (F("."));
+  
   delay(3000); // wait 3 second to allow the serial/uart object to start
+  ecran.print (F("."));
 
   wifly.reset(); // reset the shield 
-
+  ecran.print (F(".\n"));
+  
   CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
   ecran.print (ssid[CurrentAP]);
   ecran.print (" ");

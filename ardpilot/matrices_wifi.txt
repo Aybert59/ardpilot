@@ -61,47 +61,47 @@ ssid 3 9 85 Pomme.de.Pain.WiFi
 Matrix 1
 Zone C3
 Name ChambrePZonePlacard
-Releves 7
+Releves 8
 ssid 0 0 41 Livebox-94C0
 ssid 0 1 44 
 ssid 0 2 44 FreeWifi
 ssid 0 3 45 FreeWifi_secure
-ssid 0 4 43 Livebox-d9b9
-ssid 0 5 91 dlink-AF06
-ssid 0 6 68 DIRECT-GuC48x
-ssid 0 7 68 DIRECT-GuC48x
-ssid 0 8 44 Livebox-94C0
-ssid 0 9 84 Livebox-55D3
+ssid 0 4 42 Livebox-d9b9
+ssid 0 5 92 dlink-AF06
+ssid 0 6 71 DIRECT-GuC48x
+ssid 0 7 71 DIRECT-GuC48x
+ssid 0 8 43 Livebox-94C0
+ssid 0 9 82 Livebox-55D3
 ssid 1 0 42 Livebox-94C0
-ssid 1 1 46 FreeWifi
-ssid 1 2 46 FreeWifi_secure
-ssid 1 3 46 
-ssid 1 4 90 dlink-AF06
+ssid 1 1 45 FreeWifi
+ssid 1 2 45 FreeWifi_secure
+ssid 1 3 45 
+ssid 1 4 91 dlink-AF06
 ssid 1 5 44 Livebox-d9b9
 ssid 1 6 66 DIRECT-GuC48x
 ssid 1 7 66 DIRECT-GuC48x
 ssid 1 8 60 Sanglier
-ssid 1 9 46 Livebox-94C0
+ssid 1 9 45 Livebox-94C0
 ssid 2 0 47 
 ssid 2 1 46 FreeWifi
 ssid 2 2 46 FreeWifi_secure
-ssid 2 3 90 dlink-AF06
+ssid 2 3 91 dlink-AF06
 ssid 2 4 43 Livebox-d9b9
 ssid 2 5 39 Livebox-94C0
 ssid 2 6 43 Livebox-94C0
-ssid 2 7 67 Sanglier
-ssid 2 8 54 
-ssid 2 9 54 
+ssid 2 7 66 Sanglier
+ssid 2 8 53 
+ssid 2 9 53 
 ssid 3 0 43 Livebox-d9b9
 ssid 3 1 43 Livebox-94C0
-ssid 3 2 91 dlink-AF06
+ssid 3 2 92 dlink-AF06
 ssid 3 3 46 
 ssid 3 4 46 FreeWifi
 ssid 3 5 46 FreeWifi_secure
-ssid 3 6 67 DIRECT-GuC48x
-ssid 3 7 67 DIRECT-GuC48x
-ssid 3 8 80 Livebox-55D3
-ssid 3 9 88 orange
+ssid 3 6 66 DIRECT-GuC48x
+ssid 3 7 66 DIRECT-GuC48x
+ssid 3 8 82 Livebox-55D3
+ssid 3 9 85 orange
 
 #
 Matrix 2

@@ -394,6 +394,158 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
             }
         }
     }
+    
     return (sqrt(distance));
 
 }
+
+int find_path_to (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY)
+{
+    int PathLength = 0; // should not exceed TailleMax (truncate ?)
+    
+    if (Appartement[ToX][ToY].piece == 0x0F)    // can't get into a wall !
+        return -1;
+    
+    PathLength = get_path (x, y, TailleMax, CurX, CurY, ToX, ToY);
+    
+    if (DebugMode ==1)
+        printf ("Raw path length : %d\n", PathLength);
+    
+    return PathLength;
+}
+
+
+int lee_expansion (int ApptPath[][APPT_W], int level, int CurX, int CurY, int ToX, int ToY)
+{
+    int i,j;
+    int k,l;
+    int found = 0;
+    
+    // check all the appt cells. if they are close to level then mark them as level +1
+    // for efficiency limit the search to a square limited to "level" distance around the dest point
+    
+    for (i = ToY-level; i <= ToY+level; i++)
+        for (j = ToX-level; j <= ToX+level; j++)
+            if ((i >= 0) && (i < APPT_L) && (j >= 0) && (j < APPT_W)) // stay within boundaries
+                if (ApptPath[i][j] == 0)                // no wall and not yet tagged
+                {
+                    // then search a cell of value "level" in the boundaries
+                    for (k = i-1; k <= i+1; k++)
+                        for (l = j-1; l <= j+1; l++)
+                            if ((k >= 0) && (k < APPT_L) && (l >= 0) && (l < APPT_W))
+                                if (ApptPath[k][l] == level)
+                                {
+                                    ApptPath[i][j] = level + 1;
+                                    if ((i == CurY) && (j == CurX))
+                                        found = 1;
+                                }
+                }
+    
+    return found;
+}
+
+int get_path (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY)
+{
+    extern float ApptDistances [APPT_L+BORDER*2][APPT_W+BORDER*2];
+    int ApptPath [APPT_L][APPT_W];
+    int i,j;
+    int k;
+    int level=1;
+    int Tolerance = 30; // distance under which we should not go, close to a wall
+FILE *fd;
+    
+    // initiate ApptPath by blacking walls + cells too close (< Tolerance)
+    
+    for (i=0; i<APPT_L; i++)
+        for (j=0; j<APPT_W; j++)
+            if (ApptDistances[i+BORDER][j+BORDER] < 20)
+                ApptPath[i][j] = -1;
+            else
+                ApptPath[i][j] = 0;
+    
+    ApptPath[ToY][ToX] = 1; // we'll start the expansion with the detination point
+    while (lee_expansion (ApptPath, level, CurX, CurY, ToX, ToY) == 0)
+        level++;
+    
+    
+    // si level > 300 : problème de longeur !
+    // opportunité de faire un malloc ?
+    
+    
+/*
+    //debug
+    printf ("writing lee expanded file\n");
+    fd = fopen ("/home/olivier/projets/ardpilot/lee_test", "w");
+    if (fd != NULL)
+    {
+        for (i=0; i<(APPT_L); i++)
+        {
+            for (j=0; j<(APPT_W); j++)
+            {
+                fprintf (fd, "%d ", ApptPath[i][j]);
+            }
+            fprintf (fd, "\n");
+        }
+        fclose (fd);
+    }
+*/
+    
+    // now trace back the proper path
+    
+    k = 0;
+    
+    i = CurY;
+    j = CurX;
+    
+    while (level >= 0)
+    {
+        if (ApptPath[i-1][j] == level)
+        {
+            x[k]=j;
+            y[k]=i-1;
+        } else if (ApptPath[i+1][j] == level)
+        {
+            x[k]=j;
+            y[k]=i+1;
+        } else if (ApptPath[i][j-1] == level)
+        {
+            x[k]=j-1;
+            y[k]=i;
+        } else if (ApptPath[i][j+1] == level)
+        {
+            x[k]=j+1;
+            y[k]=i;
+        } else if (ApptPath[i-1][j-1] == level)
+        {
+            x[k]=j-1;
+            y[k]=i-1;
+        } else if (ApptPath[i+1][j+1] == level)
+        {
+            x[k]=j+1;
+            y[k]=i+1;
+        } else if (ApptPath[i+1][j-1] == level)
+        {
+            x[k]=j-1;
+            y[k]=i+1;
+        } else if (ApptPath[i-1][j+1] == level)
+        {
+            x[k]=j+1;
+            y[k]=i-1;
+        }
+        
+        i=y[k];
+        j=x[k];
+        level--;
+        k++;
+    }
+        
+/* debug
+ 
+    for (level=0;level<=k;level++)
+        printf ("step %d - %d,%d\n", level, x[level], y[level]);
+ 
+*/
+    return k; // path length
+        
+}
+

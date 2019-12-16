@@ -57,6 +57,8 @@ int NoInterrupt = 0;
 extern void detectlines (double *, double *, double *, int, int, float);
 extern void detectpath (double *, double *, double *, int, int, int);
 
+int CurrentLocX = 50;   // by default locate at the parent's desk
+int CurrentLocY = 180;  // by default locate at the parent's desk
 
 char logFileName[64];
 char Expecting[16];
@@ -250,18 +252,12 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server PING\n");
                 
-                
-                // todo :
-                //
-                // add other measures : volts and mem
-                //
-                // combine in one unique message
-                //
-                // and update gauges accordingly
-                
                 control_message(MSG_INFO, "COLORTPing", 10);
-                sleep(1);
-                control_message(MSG_INFO, &(buffer[1]), 10);
+                
+                // the buffer contains head, roll, pitch and temperature
+                sscanf (&(buffer[1]), "%*d %*d %*d %d", &x);
+                sprintf (message, "TEMP %d", x);
+                control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_LOG :
@@ -429,7 +425,8 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                         if (debug_mode == 1)
                             printf ("Located at %d,%d - angle %.0f° - correlation %.3f \n",minx,miny, minAngle, val);
                         draw_matched_scan (normX, normY, 180, minx, miny);
-                        
+                        CurrentLocX = minx;
+                        CurrentLocY = miny;
                         LocInProgress =0;
                         
                     } else { // this scan has been requested for itself
@@ -492,7 +489,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
     int x, y, m;
     float facteur;
     int duree;
-    
+    int pathx[300], pathy[300];
 
         sequence = '*'; // par convention si demande vient de interface graphique
         
@@ -542,6 +539,14 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
                 strcat (message, "T");
             strcat (message, "DbgMode");
             control_message(MSG_INFO, message, 0);
+            
+            message[0] = C_DEBUG;
+            if (DebugMode == 0)
+                message[1] = '\1';
+            else
+                message[1] = '\2';
+            message[2] = '\0';
+            write_ard (ardfd, message);
         }
         else if (!strncmp(buffer, "LEARN", 5))
         {
@@ -804,7 +809,11 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
             sscanf (&(buffer[4]), "%d %d", &x, &y);
             switch (PlanClickAction) {
                 case 0 :
-                    printf ("Received request to go to x=%d, y=%d\n", x, y);
+                    if (debug_mode == 1)
+                        printf ("Received request to go from %d, %d, to x=%d, y=%d\n", CurrentLocX, CurrentLocY, x, y);
+                    m = find_path_to (pathx, pathy, 300, CurrentLocX, CurrentLocY, x, y);
+                    if (m > 0)
+                        draw_path (pathx, pathy, m);
                 break;
                 
                 case 1 :  // we get here only if LearnMode was activated
@@ -1074,7 +1083,7 @@ int main(int argc, char *argv[])
     pid_t pgid;
     char buffer[4];
     char message[64];
-
+int pathx[300], pathy[300];
 
     
     process = vfork();
@@ -1193,6 +1202,10 @@ int main(int argc, char *argv[])
         sleep(1);
         draw_plan();
         init_appt_distances ();
+
+DebugMode =1;
+n = find_path_to (pathx, pathy, 300, CurrentLocX, CurrentLocY, 30, 160);
+draw_path (pathx, pathy, n);
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
         ardfd = open_ard_socket (PORT_NUMBER + 1);
