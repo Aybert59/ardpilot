@@ -9,6 +9,7 @@ void begin_ecran ()
 {
   ecran.begin();
   ecran.setFont(DefaultFont);
+  ecran.setPowerSave(0);
 }
 
 void affiche_ecran (int x, int y, String message)

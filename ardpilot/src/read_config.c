@@ -213,8 +213,16 @@ void read_and_send_config ()
         printf ("Config file unreadable !\n");
     }
     
+
+        printf ("Reading compas correction file\n");
     read_compas_correction();
+    
+
+        printf ("refreshing health information\n");
     get_health();
+    
+
+        printf ("scanning networks\n");
     bloc_get_top_wifi (); // we have to do it once
 }
 

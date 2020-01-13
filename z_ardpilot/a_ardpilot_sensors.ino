@@ -76,7 +76,7 @@ void I2Cread(uint8_t Address, uint8_t Register, uint8_t Nbytes, uint8_t* Data)
   delay(20); // Wait 20ms for transmit
   
   // Read Nbytes
-  Wire.requestFrom(Address, Nbytes); 
+  Wire.requestFrom((int)Address, (int)Nbytes); 
   while (Wire.available())
     Data[index++]=Wire.read();
 }
@@ -112,7 +112,8 @@ void I2CwriteByte(uint8_t Address, uint8_t Register, uint8_t Data)
 long measure_distance_us (int n) {
   long d;
 
-  d = SonarAV.ping_median(n);
+  //d = SonarAV.ping_median(n);
+    d = 58.0 * 32.0;
     
   return d;
 }
@@ -343,8 +344,6 @@ void initialize_bno055() {
 //this procedure for real BNO055. Not used for CMPS12
 
 // nevertheless should turn 360° to initialize compass
-
-return(0);
 
 
 }
@@ -636,7 +635,7 @@ extern void *__brkval;
 
 // function to return the amount of free RAM
  
-void memoryFree(unsigned char sequence)
+void memoryFree()
 {
    int freeValue;
    
@@ -646,6 +645,9 @@ void memoryFree(unsigned char sequence)
    else
      freeValue = ((int)&freeValue) - ((int)__brkval);
 */
+  ecran.clear();
+  ecran.print ("Mem free in\n");
+      
   freeValue = freeMemory();
   
   obuffer[0] = C_MEM;
@@ -654,6 +656,8 @@ void memoryFree(unsigned char sequence)
 
   delay (200);   // don't be too fast, the WIFI interface cannot handle
   wifi_write ();
+
+  ecran.print ("Mem free out\n");
 }
 
 void batteryLevel()

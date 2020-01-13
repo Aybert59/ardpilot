@@ -7,31 +7,23 @@
 //////////////////////////////////////////
 
 
-//#define DEBUG_ARDPILOT true     // in this case use SoftwareSerial to communucate with Wifly, and let HWserial for debug. 
-                                // Nice but interferes with servos. TX jumper to D3, RX jumer to D7
-
-// nothing                      // Normal operation mode. TX jumper to D0, RX jumer to D1
-                                // appuyer sur bouton reset de la carte WIFI pendant le televersement !!!
-
 // include the library code:
 
 #include <Arduino.h>
 #include <Wire.h> //I2C Arduino Library
 #include <Servo.h>
 #include "grammar.h"
-#include <SoftwareSerial.h>
-#include <NewPing.h>
 #include <U8x8lib.h>
 
 // Wifi Shield
-
-#include <WiFly.h>
-#include <WiFlyClient.h>
-
-
- // WIFLY reference : http://www.seeedstudio.com/wiki/Wifi_Shield_V2.0
-WiFly wifly(&Serial); // create a WiFly library object using the serial connection to the WiFi shield we created above.
-
+#include <SPI.h>
+#include <WiFiNINA.h>
+int WifiStatus = WL_IDLE_STATUS;
+WiFiClient WiClient;
+//String ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
+String ssid[] = {"Livebox-94C0"};
+#include "passwords.h" // just contains : String *pass[] = { "password1", "password2"};
+byte CurrentAP = 0;
 
 
 // Ecran : référence ici : https://github.com/olikraus/u8g2/wiki et https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
@@ -50,7 +42,7 @@ const int LED = 8;
 const int TRIG_U = 2;   // capteur ultrason
 const int ECHO_U = 5;   // capteur ultrason
 
-NewPing SonarAV (TRIG_U, ECHO_U);
+// NewPing SonarAV (TRIG_U, ECHO_U);
 
 char ibuffer[64];  // optimisation, ne pas allouer de mémoire tampondans le scan des SSIDs
 char obuffer[64];
@@ -91,12 +83,6 @@ int AjustementMoteur = 0;
 float FacteurAlignement = 1.0;
 
 // parametres de config
-
-
-//const char *ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
-const char *ssid[] = {"Livebox-94C0"};
-#include "passwords.h" // just contains : const char *pass[] = { "password1", "password2"};
-byte CurrentAP;
 
 
 // tourelle
@@ -141,11 +127,12 @@ void send_robot_status () {
   wifi_write();
 
   delay (400);
-  memoryFree(0x00);
+  memoryFree();
   delay (400);
   batteryLevel();
   delay (400);
   get_angle ('*');
+  ecran.print ("status complete\n");
   delay (400);
 }
 
@@ -163,35 +150,32 @@ void(* resetFunc) (void) = 0;
 // challenge : comment savoir si la socket est cassée ?
 
 void setup() {
-  
+
+ // for debug only
+ 
   pinMode (LED, OUTPUT);
   
   pinMode (TRIG_U, OUTPUT);
-//  pinMode (ENABLE_L, OUTPUT);
-//  pinMode (ECHO_L, INPUT);
   pinMode (ECHO_U, INPUT);
   digitalWrite (TRIG_U, LOW);
-//  digitalWrite (ENABLE_L, LOW); // low : use the i2c
 
   Wire.begin();
+  digitalWrite (LED, HIGH);
   begin_ecran ();
-  ecran.print (F("Hello "));
+  digitalWrite (LED, LOW);
+  ecran.print ("Hello \n");
  
-  Serial.begin(9600); // start the serial connection to the shield
-  ecran.print (F("."));
-  
-  delay(3000); // wait 3 second to allow the serial/uart object to start
-  ecran.print (F("."));
-
-  wifly.reset(); // reset the shield 
-  ecran.print (F(".\n"));
-  
   CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
+
   ecran.print (ssid[CurrentAP]);
-  ecran.print (" ");
-  while (!wifly.join(ssid[CurrentAP], pass[CurrentAP],WIFLY_AUTH_WPA2_PSK)) {
-      delay (100);
+  ecran.print ("\n");
+
+  while (WifiStatus != WL_CONNECTED) {
+    WifiStatus = WiFi.begin(ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
+      ecran.print (".");
+      delay(4000);
   }
+  
   ecran.print ("ok\n");
 }
 
@@ -241,7 +225,7 @@ void loop() {
 
   if (!WifiConnected) {
       ecran.print ("Server.. ");
-      if (!wifly.connect (host, port)) {
+      if (!WiClient.connect (host, port)) {
         led_blink (2, 100, 100);
         ecran.print ("\n");          
         return;  
@@ -249,10 +233,7 @@ void loop() {
       ecran.print ("ok\n");
       
       WifiConnected = true;
-      obuffer[0] = 'a'; //dummy
-      obuffer[1] = '\0';
-      wifi_write(); // vider le "*HELLO*" qui traine
-         
+       
 
       terminate_setup ();
       wifi_display_IP ();
@@ -263,17 +244,22 @@ void loop() {
       Primitive = P_NULL;
       OldPrimitive = P_NULL;
 
-//wifly.sendCommand("get everything\r");          // à placer sur un bouton Diag
-
       reload_config_parameters(); // en dernier de ce bloc d'init
+      ecran.clear();
+      ecran.print ("Init complete\n");
   } 
 
   if (WifiConnected) {
 
-    // Check for any data has come to Wifly  
+    // Check for any data has come to WiFi  
     len = 0;
+    digitalWrite (LED, HIGH);
     len = wifi_read (); 
+    digitalWrite (LED, LOW);
     if (len > 0) {    
+      ecran.print ("len :");
+      ecran.print (len);
+      ecran.print ("\n");
       manage_command (len);
     } 
       
@@ -343,26 +329,18 @@ void loop() {
       {
         close_and_shutdown();
         digitalWrite (LED, LOW);
-        wifly.reboot();
+        WiFi.disconnect();
         resetFunc();  
       }
       if (Initialisation == true)
       {
         Initialisation = false;
-        ecran.setPowerSave(1);
+//        ecran.setPowerSave(1);
       }
     }
+    
     OldPrimitive = Primitive;
     OldPrimValue = PrimValue;
-
-// ---- below : debug only - comment otherwise
-// debug : permet de visualiser la durée d'une boucle
-
-//    if ((loop_cnt & 1) == 0) {
-//      digitalWrite (LED, HIGH);
-//    } else {
-//      digitalWrite (LED, LOW);
-//    }
     
   } // if connected
 }    

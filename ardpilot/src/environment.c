@@ -99,15 +99,21 @@ int get_health ()
     char message[32];
     // récupérer adresse IP ?
     
+    printf ("get_health : mem\n");
     bloc_get_memory_free ();
+    printf ("get_health : compas\n");
     Compas = bloc_get_compas ();
+    printf ("get_health : volt\n");
     bloc_check_voltage ();
+    printf ("get_health : ping\n");
     bloc_check_ping();
     
+    printf ("get_health : end\n");
     sprintf (message, "AXY %d", Compas);
     control_message(MSG_INFO, message, 10);
     // récupérer vitesse des moteurs, position des servos ?
    
+    printf ("get_health : exiting\n");
      return 0;
 }
 

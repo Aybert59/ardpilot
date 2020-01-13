@@ -99,7 +99,7 @@ int boucle_attente (unsigned char parametre, int attente, int retries)
         }
         else if (ret == 0)
         {
-            printf("No data within timeout period\n");
+            printf("No data within timeout period, remaining %d tries\n", count);
             if (count == 0)
             {
                 // number of retries has expired

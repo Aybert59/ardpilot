@@ -81,8 +81,10 @@ void manage_command (byte len) {
     
   case C_LED:
   
-    v = ibuffer[1] - 1;
-    digitalWrite (LED, v);
+    if (v == 1)
+      digitalWrite (LED, LOW);
+    else
+      digitalWrite (LED, HIGH);
     break;
 
   case C_DEBUG:
@@ -274,7 +276,7 @@ void manage_command (byte len) {
     
   case C_MEM:
   
-    memoryFree(sequence);
+    memoryFree();
     break;
  
   case C_BAT:
