@@ -84,6 +84,7 @@ int boucle_attente (unsigned char parametre, int attente, int retries)
         {
             printf ("error on select()");
             // let's loop infinitely, user will shutdown the system himself (something weird happened)
+            retcode = 1;
         }
         else if (ret)
         {
@@ -96,6 +97,8 @@ int boucle_attente (unsigned char parametre, int attente, int retries)
                 val = read_ard (ardfd); // in this case val equals the command received from the robot
             if (FD_ISSET(scriptfd, &rfds))
                 val = read_cmd (scriptfd, '\n');
+            
+            retcode = 0;
         }
         else if (ret == 0)
         {
@@ -119,7 +122,11 @@ int bloc_get_top_wifi ()
 {
     do
         get_top_wifi ();
-    while (boucle_attente (C_TOPWIFI, 5000, 0));
+    while (boucle_attente (C_TOPWIFI, 5000, 0)); // attention faux, devrait appeler bloucle attente 10 fois avant de revenir car le robot renvoie 10 messages
+    
+    
+    // attention si boucle attente sort en timeout alors ret = 1 ==> le while va tourner en rond
+    // mais à un moment il devrait trouver ce qu'il attend ????
     
     return 1;
 }
@@ -195,7 +202,8 @@ char bloc_primitive_spot_turn (int cap_demande) // cap corrigé en ° (0 = boule
     unsigned char sequence;
     char buffer[64];
     int cap;
-
+    int ret = 1, retries = 5;
+    
     extern char PrimitiveResult;
     
     sequence = Sequence[C_PRI] + 1;
@@ -208,9 +216,15 @@ char bloc_primitive_spot_turn (int cap_demande) // cap corrigé en ° (0 = boule
     cap = cap_correction[cap_demande];
     sprintf (&(buffer[3]), "%d",cap);
     
-    write_ard (ardfd, buffer);
-    boucle_attente (C_COLOR, 0, 0);
- 
+    PrimitiveResult = 'T';
+    while ((ret == 1) && (retries > 0))
+    {
+        write_ard (ardfd, buffer);
+        ret = boucle_attente (C_COLOR, 5000, 0); // wait 5 seconds
+        
+        retries--;
+    }
+    
     // afficher les parametres relevés
     
     if (PrimitiveResult == 'T')

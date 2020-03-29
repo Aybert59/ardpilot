@@ -113,8 +113,13 @@ long measure_distance_us (int n) {
   long d;
 
   //d = SonarAV.ping_median(n);
-    d = 58.0 * 32.0;
-    
+   digitalWrite(TRIG_U, LOW);
+   delayMicroseconds(2);
+   digitalWrite(TRIG_U, HIGH);
+   delayMicroseconds(10);
+   digitalWrite(TRIG_U, LOW);
+   d = pulseIn(ECHO_U, HIGH);
+ 
   return d;
 }
 
@@ -146,48 +151,7 @@ int measure_distance_lidar_i2c () {
   return val;
   
 }
-/*
-long measure_distance_lidar_pwm (int n) {
-  long d, s, moy, ecart = 0, somme = 0;
-  int i, j;
-  long val[7];
 
-  if (n > 7)
-    n = 7;
-    
-  for (i=0;i<n;i++)
-  {
-    val[i] = get_lidar_val_pwm();
-    somme += val[i];
-  }
-  moy = somme / n; 
- 
-  for (i=0;i<n;i++)
-  {
-    s += (val[i] - moy) * (val[i] - moy);
-  }
-  ecart = sqrt(s/n);
-  
-  j = n;
-  for (i=0;i<n;i++)
-  {
-    if (abs(val[i] - moy) > ecart)
-    {
-      val[i] = 0;
-      j--;
-    }
-  }
-  somme = 0;
-  for (i=0;i<n;i++)
-  {
-    somme += val[i];
-  }
-  
-  moy = somme / j;
-  
-  return moy;
-}
-*/
 
 long measure_distance (int n) {
   long li,us, d;
@@ -645,26 +609,23 @@ void memoryFree()
    else
      freeValue = ((int)&freeValue) - ((int)__brkval);
 */
-  ecran.clear();
-  ecran.print ("Mem free in\n");
-      
+
   freeValue = freeMemory();
   
   obuffer[0] = C_MEM;
-  obuffer[1] = sequence;
+  obuffer[1] = '*';
   itoa (freeValue, &(obuffer[2]), 10);
 
   delay (200);   // don't be too fast, the WIFI interface cannot handle
   wifi_write ();
 
-  ecran.print ("Mem free out\n");
 }
 
 void batteryLevel()
 {
   unsigned int raw_bat;
  
-  analogReference (INTERNAL);
+ // analogReference (DEFAULT);
   raw_bat = analogRead(A0);
   
   obuffer[0] = C_BAT;

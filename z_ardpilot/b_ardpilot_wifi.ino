@@ -50,15 +50,18 @@ byte wifi_read ()
 // not suitable for raw data which may contain zeros
 // see wifi_write_binary() in that case
 
-void wifi_write ()
+int wifi_write ()
 {
   unsigned char len;
+  int v;
 
   len = (unsigned char) strlen (obuffer);
 
   WiClient.write(&len, 1);
-  WiClient.write((const uint8_t*)obuffer, len);
+  v = WiClient.write((const uint8_t*)obuffer, len);
   delay(20);  // timeout by default of the RN-171 is 10ms, before it actually sends the TCP packet. a bit more is safer (15 gives yet some hickups)
+
+  return (v);
 
 }
 
@@ -77,15 +80,21 @@ void wifi_close () {
 }
 
 
-void wifi_getTopAP (char sequence)
+void wifi_getTopAP (int rst)
 {
   byte i, j;
   int numSsid;
   char resultat[10][24];
   int rssi[10];
-
-  numSsid = WiFi.scanNetworks();
+  int thisNet;
+    
+  if (rst == 1)
+  {
+    WiClient.stop();
+  }
  
+  numSsid = WiFi.scanNetworks();
+
   for (i = 0; i < 10; i++)
   {
       resultat[i][0] = '9';
@@ -95,11 +104,11 @@ void wifi_getTopAP (char sequence)
       rssi[i] = 99;
   }
  
-  for (int thisNet = 0; thisNet < numSsid; thisNet++)
+  for (thisNet = 0; thisNet < numSsid; thisNet++)
   {  
     for (i = 0; i < 10; i++)
       {
-        if (WiFi.RSSI(thisNet) < 99)
+        if (WiFi.RSSI(thisNet) < rssi[i])
         {
           for (j = 9; j > i; j--)
           {
@@ -109,21 +118,33 @@ void wifi_getTopAP (char sequence)
               rssi[j] = rssi[j-1];
             }
           }
-          resultat[i][0] = (char) WiFi.RSSI(thisNet) / 10;
-          resultat[i][1] = (char) WiFi.RSSI(thisNet) % 10;
+          resultat[i][0] = (char) (48 + (abs(WiFi.RSSI(thisNet)) / 10));    // 48 is ascii code for '0'
+          resultat[i][1] = (char) (48 + (abs(WiFi.RSSI(thisNet)) % 10));    
           strcpy (&(resultat[i][3]), WiFi.SSID(thisNet));
-          rssi[i]=WiFi.RSSI(thisNet);
+          rssi[i]=abs(WiFi.RSSI(thisNet));
           break;
         }
     }
   }
-  
-    for (i = 0; i < 10; i++)
+
+  if (rst == 1)
+  {
+    WifiStatus = WiFi.begin(ssid[CurrentAP].c_str(), pass[CurrentAP].c_str()); //necessaire
+    while (WifiStatus != WL_CONNECTED) {
+      WifiStatus = WiFi.begin(ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
+      delay(2000);
+    }
+    while (!WiClient.connect (host, port)) {
+        led_blink (2, 100, 100);
+    }
+  }
+          
+  for (i = 0; i < 10; i++)
   {
       strcpy (&(obuffer[2]), resultat[i]);
       obuffer[0] = C_TOPWIFI;
-      obuffer[1] = sequence;
-      wifi_write();
+      obuffer[1] = '*';
+      j = wifi_write();                               
       delay(120);
   }
 }

@@ -223,7 +223,7 @@ void read_and_send_config ()
     
 
         printf ("scanning networks\n");
-    bloc_get_top_wifi (); // we have to do it once
+    bloc_get_top_wifi (); // we have to do it once -- not any more 
 }
 
 void init_appt_distances ()

@@ -81,7 +81,7 @@ void manage_command (byte len) {
     
   case C_LED:
   
-    if (v == 1)
+    if (sequence == 1)
       digitalWrite (LED, LOW);
     else
       digitalWrite (LED, HIGH);
@@ -259,8 +259,10 @@ void manage_command (byte len) {
     
  
   case C_TOPWIFI:
-     
-    wifi_getTopAP (sequence);
+  
+
+    wifi_getTopAP (1);
+    
     break;
     
   case C_DISTL:

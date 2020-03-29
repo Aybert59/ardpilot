@@ -34,6 +34,9 @@ void get_top_wifi ()
         message[2] = '\0';
         write_ard (ardfd, message);
     }
+    
+    close (ardfd); // scanNetworks will make the robot disconect from AP
+    ardfd = open_ard_socket (PORT_NUMBER + 1);
 }
 
 int analyze_environment ()
@@ -99,22 +102,16 @@ int get_health ()
     char message[32];
     // récupérer adresse IP ?
     
-    printf ("get_health : mem\n");
     bloc_get_memory_free ();
-    printf ("get_health : compas\n");
     Compas = bloc_get_compas ();
-    printf ("get_health : volt\n");
     bloc_check_voltage ();
-    printf ("get_health : ping\n");
     bloc_check_ping();
     
-    printf ("get_health : end\n");
     sprintf (message, "AXY %d", Compas);
     control_message(MSG_INFO, message, 10);
     // récupérer vitesse des moteurs, position des servos ?
    
-    printf ("get_health : exiting\n");
-     return 0;
+    return 0;
 }
 
 int mesure_wifi (int MatRef)
@@ -277,7 +274,7 @@ int locate_myself ()
     unsigned char len;
 
     
-    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n", 0);
+//    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n", 0);
     control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n", 0);
     
     // step 0 cleanup & prepare

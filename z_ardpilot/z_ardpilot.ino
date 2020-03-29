@@ -146,13 +146,10 @@ void reload_config_parameters() {
 
 void(* resetFunc) (void) = 0; 
 // call this function : resetFunc() to reset the Arduino (usefull if we loose WIFI --> will reconnect everything)
-// juste avant tenter un wifly.reboot() ?
-// challenge : comment savoir si la socket est cassée ?
+
 
 void setup() {
 
- // for debug only
- 
   pinMode (LED, OUTPUT);
   
   pinMode (TRIG_U, OUTPUT);
@@ -160,20 +157,28 @@ void setup() {
   digitalWrite (TRIG_U, LOW);
 
   Wire.begin();
-  digitalWrite (LED, HIGH);
   begin_ecran ();
-  digitalWrite (LED, LOW);
   ecran.print ("Hello \n");
- 
+
+  String fv = WiFi.firmwareVersion();
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+    ecran.print ("Please upgrade\n");
+    ecran.print ("the firmware\n");
+    ecran.print ("from ");
+    ecran.print (fv);
+    ecran.print ("\n");
+  }
+
+  
   CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
 
   ecran.print (ssid[CurrentAP]);
-  ecran.print ("\n");
+  ecran.print (" ");
 
   while (WifiStatus != WL_CONNECTED) {
     WifiStatus = WiFi.begin(ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
       ecran.print (".");
-      delay(4000);
+      delay(2000);
   }
   
   ecran.print ("ok\n");
@@ -184,19 +189,13 @@ void terminate_setup () {
   
   //Put the  (compass) into the correct operating mode
   initialize_bno055();
-  
-
-//  Wire.beginTransmission(Lidar_address); //open communication with Lidar lite V3
-//  Wire.write((int)0x00); // sets register pointer to  (0x00)  
-//  Wire.write((int)0x04); // sets register pointer to  (0x00)  
-//  Wire.endTransmission(); // stop transmitting
-  
+   
   ServoLeft.attach (10);
   ServoRight.attach (12);
  
   ServoLeft.writeMicroseconds(1500);
   ServoRight.writeMicroseconds(1500);
-  
+
   servo1.attach(11);
   servo2.attach(13);
 
@@ -253,13 +252,8 @@ void loop() {
 
     // Check for any data has come to WiFi  
     len = 0;
-    digitalWrite (LED, HIGH);
     len = wifi_read (); 
-    digitalWrite (LED, LOW);
     if (len > 0) {    
-      ecran.print ("len :");
-      ecran.print (len);
-      ecran.print ("\n");
       manage_command (len);
     } 
       

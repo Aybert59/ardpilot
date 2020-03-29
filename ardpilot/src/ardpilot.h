@@ -8,6 +8,8 @@
 #ifndef ardpilot_h
 #define ardpilot_h
 
+#define PORT_NUMBER 8001
+
 struct cellule
 {
     unsigned char piece; // 4 msb : pièce, 4 lsb : zone dans la pièce
@@ -62,6 +64,7 @@ int get_health ();
 int analyze_environment ();
 int record_wifi_reference (int n);
 void average_and_save_wifi (int x, int y);
+int open_ard_socket (int portno);
 
 // from drawing.c
 void draw_plan ();

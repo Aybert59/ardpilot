@@ -64,7 +64,7 @@ char logFileName[64];
 char Expecting[16];
 int (*ExpectFunction)();
 
-#define PORT_NUMBER 8001
+
 
 /* displays received message to the standard output */
 void control_message (char action, char *message, int attente) // attente in ms, wait for the message to be interpreted by GUI
@@ -353,7 +353,8 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server BAT %d\n", x);
                 
-                sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023); // 560 = 100%
+ //               sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023); // 560 = 100%
+                sprintf (message, "VOLT %'.2f", (((float)x)*50.0)/1023); 
                 control_message(MSG_INFO, message, 10);
                 break;
                 
@@ -1017,6 +1018,7 @@ int open_ard_socket (int portno)
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     int opt;
+    char msg[64];
     
     fd1 = socket(AF_INET, SOCK_STREAM, 0);
     if (fd1 < 0) {
@@ -1038,8 +1040,8 @@ int open_ard_socket (int portno)
     }
     
     // wait and accept a client on the socket
-    
-    control_message(MSG_INFO, "Now waiting for Arduino to connect", 0);
+    sprintf (msg, "Now waiting for Arduino to connect on port %d", portno);
+    control_message(MSG_INFO, msg, 0);
     listen(fd1,5);
     clilen = sizeof(cli_addr);
     fd2 = accept(fd1, (struct sockaddr *) &cli_addr, &clilen);
@@ -1202,16 +1204,17 @@ int pathx[300], pathy[300];
         sleep(1);
         draw_plan();
         init_appt_distances ();
-
+/*
 DebugMode =1;
 n = find_path_to (pathx, pathy, 300, CurrentLocX, CurrentLocY, 30, 160);
 draw_path (pathx, pathy, n);
+ */
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
         ardfd = open_ard_socket (PORT_NUMBER + 1);
 
         control_message(MSG_INFO, "Starting activity ... ", 0);
-        control_message(MSG_INFO, "Please turn the robot 360° on itself upon startup", 0);
+        control_message(MSG_INFO, "please turn the robot 360° on itself upon startup", 0);
         init_command_mode ();
         strcpy(Expecting, "");
         
