@@ -34,9 +34,6 @@ void get_top_wifi ()
         message[2] = '\0';
         write_ard (ardfd, message);
     }
-    
-    close (ardfd); // scanNetworks will make the robot disconect from AP
-    ardfd = open_ard_socket (PORT_NUMBER + 1);
 }
 
 int analyze_environment ()

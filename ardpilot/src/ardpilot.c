@@ -353,8 +353,8 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server BAT %d\n", x);
                 
- //               sprintf (message, "VOLT %'.2f", ((float)x)*12.1/1023); // 560 = 100%
-                sprintf (message, "VOLT %'.2f", (((float)x)*50.0)/1023); 
+
+                sprintf (message, "VOLT %'.2f", (((float)x)*10.0)/1023); 
                 control_message(MSG_INFO, message, 10);
                 break;
                 

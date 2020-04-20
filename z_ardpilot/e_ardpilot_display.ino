@@ -1,9 +1,11 @@
 
 // référence ici : https://github.com/olikraus/u8g2/wiki
+// Ecran : référence ici : https://github.com/olikraus/u8g2/wiki et https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+
 
 // 8 lignes (de 0 à 7) et 16 charactères (de 0 à 15)
 
-#define DefaultFont u8x8_font_artosserif8_r
+#define DefaultFont u8x8_font_artossans8_r
 
 void begin_ecran ()
 {

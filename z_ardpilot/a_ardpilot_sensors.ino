@@ -11,6 +11,8 @@
 
 
 // docs et refs du compas https://robot-electronics.co.uk/files/cmps12.pdf and https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/downloads 
+// docs du lidar : http://static.garmin.com/pumac/LIDAR_Lite_v3_Operation_Manual_and_Technical_Specifications.pdf
+// attention contrairement à documentation, le fil jaune doit être relié à la masse !
 
 void I2Cscan()
 {
@@ -107,14 +109,25 @@ void I2CwriteByte(uint8_t Address, uint8_t Register, uint8_t Data)
   }
 }
 
+void initialize_lidar() {
+  
+  I2CwriteByte(Lidar_address, 0x00, 0x00);
+  delay (200);
+  // Default mode, balanced performance
+  I2CwriteByte(Lidar_address, 0x02, 0x80); 
+  I2CwriteByte(Lidar_address, 0x04, 0x08); 
+  I2CwriteByte(Lidar_address, 0x1c, 0x00); 
+  
+}
+
+  
 // Ultrasonic sensors reading
 
 long measure_distance_us (int n) {
   long d;
 
   //d = SonarAV.ping_median(n);
-   digitalWrite(TRIG_U, LOW);
-   delayMicroseconds(2);
+
    digitalWrite(TRIG_U, HIGH);
    delayMicroseconds(10);
    digitalWrite(TRIG_U, LOW);
@@ -128,7 +141,7 @@ int measure_distance_lidar_i2c () {
   
   Wire.beginTransmission((int)Lidar_address); // transmit to LIDAR-Lite
   Wire.write((int)0x00); // sets register pointer to  (0x00)  
-  Wire.write((int)0x04); // sets register pointer to  (0x00)  
+  Wire.write((int)0x04); // write 4  (0x04)  
   Wire.endTransmission(); // stop transmitting
 
   delay(20); // Wait 20ms for transmit
@@ -625,8 +638,8 @@ void batteryLevel()
 {
   unsigned int raw_bat;
  
- // analogReference (DEFAULT);
-  raw_bat = analogRead(A0);
+  analogReference (DEFAULT);
+  raw_bat = analogRead(A2);
   
   obuffer[0] = C_BAT;
   itoa (raw_bat, &(obuffer[1]), 10);

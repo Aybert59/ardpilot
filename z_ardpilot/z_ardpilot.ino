@@ -15,18 +15,13 @@
 #include "grammar.h"
 #include <U8x8lib.h>
 
-// Wifi Shield
-#include <SPI.h>
-#include <WiFiNINA.h>
-int WifiStatus = WL_IDLE_STATUS;
-WiFiClient WiClient;
+// Wifi 
 //String ssid[] = {"TP-LINK_9692C8", "Livebox-94C0"};
 String ssid[] = {"Livebox-94C0"};
 #include "passwords.h" // just contains : String *pass[] = { "password1", "password2"};
 byte CurrentAP = 0;
 
 
-// Ecran : référence ici : https://github.com/olikraus/u8g2/wiki et https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
 U8X8_SSD1306_128X64_NONAME_HW_I2C ecran(U8X8_PIN_NONE);
 
 #define host "192.168.1.3"
@@ -38,17 +33,17 @@ const int Lidar_address = 0x62;
 // adresse écran 3C
 
 const int LED = 8;
-
+const int WIFI_RST = 3;
+const int WIFI_ON = 4;
 const int TRIG_U = 2;   // capteur ultrason
 const int ECHO_U = 5;   // capteur ultrason
 
-// NewPing SonarAV (TRIG_U, ECHO_U);
+
 
 char ibuffer[64];  // optimisation, ne pas allouer de mémoire tampondans le scan des SSIDs
 char obuffer[64];
 
 bool WifiConnected = false;
-//bool CallibCompas = false;
 bool DebugMode = false;
 bool Initialisation = true;
 
@@ -151,35 +146,32 @@ void(* resetFunc) (void) = 0;
 void setup() {
 
   pinMode (LED, OUTPUT);
+  pinMode (WIFI_RST, OUTPUT);
+  digitalWrite (WIFI_RST, LOW); // disable chip
+
+  pinMode (WIFI_ON, OUTPUT);
+  digitalWrite (WIFI_ON, LOW); // disable power
   
   pinMode (TRIG_U, OUTPUT);
   pinMode (ECHO_U, INPUT);
   digitalWrite (TRIG_U, LOW);
 
+  delay (3000);
+
   Wire.begin();
+  Wire.setClock(100000);
+  
   begin_ecran ();
   ecran.print ("Hello \n");
 
-  String fv = WiFi.firmwareVersion();
-  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
-    ecran.print ("Please upgrade\n");
-    ecran.print ("the firmware\n");
-    ecran.print ("from ");
-    ecran.print (fv);
-    ecran.print ("\n");
-  }
-
-  
+  wifi_start();
+ 
   CurrentAP = wifi_FindBestAP (1); // passer le nb d'entrées dans le tableau des ssid
 
   ecran.print (ssid[CurrentAP]);
   ecran.print (" ");
 
-  while (WifiStatus != WL_CONNECTED) {
-    WifiStatus = WiFi.begin(ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
-      ecran.print (".");
-      delay(2000);
-  }
+  wifi_begin (ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
   
   ecran.print ("ok\n");
 }
@@ -189,6 +181,8 @@ void terminate_setup () {
   
   //Put the  (compass) into the correct operating mode
   initialize_bno055();
+
+  initialize_lidar();
    
   ServoLeft.attach (10);
   ServoRight.attach (12);
@@ -221,18 +215,17 @@ void loop() {
   byte len;
   static long loop_cnt;
 
-
+  
+  
   if (!WifiConnected) {
       ecran.print ("Server.. ");
-      if (!WiClient.connect (host, port)) {
+      WifiConnected = wifi_connect (host, port);
+      if (! WifiConnected) {
         led_blink (2, 100, 100);
         ecran.print ("\n");          
         return;  
       }
-      ecran.print ("ok\n");
-      
-      WifiConnected = true;
-       
+      ecran.print ("ok\n");   
 
       terminate_setup ();
       wifi_display_IP ();
@@ -245,7 +238,7 @@ void loop() {
 
       reload_config_parameters(); // en dernier de ce bloc d'init
       ecran.clear();
-      ecran.print ("Init complete\n");
+      ecran.println ("Init complete");
   } 
 
   if (WifiConnected) {
@@ -323,7 +316,7 @@ void loop() {
       {
         close_and_shutdown();
         digitalWrite (LED, LOW);
-        WiFi.disconnect();
+//        WiFi.disconnect();
         resetFunc();  
       }
       if (Initialisation == true)

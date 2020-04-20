@@ -122,7 +122,7 @@ int bloc_get_top_wifi ()
 {
     do
         get_top_wifi ();
-    while (boucle_attente (C_TOPWIFI, 5000, 0)); // attention faux, devrait appeler bloucle attente 10 fois avant de revenir car le robot renvoie 10 messages
+    while (boucle_attente (C_TOPWIFI, 10000, 0)); // attention faux, devrait appeler bloucle attente 10 fois avant de revenir car le robot renvoie 10 messages
     
     
     // attention si boucle attente sort en timeout alors ret = 1 ==> le while va tourner en rond
