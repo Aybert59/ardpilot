@@ -14,6 +14,7 @@ ALL_OBJS=$(OBJ)/$(PROJET).o \
 	$(OBJ)/read_config.o \
 	$(OBJ)/drawing.o \
 	$(OBJ)/calculs.o \
+	$(OBJ)/navigation.o \
 	$(OBJ)/commandes.o
 
 $(BIN)/$(PROJET) : $(ALL_OBJS)

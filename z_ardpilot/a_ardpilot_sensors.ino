@@ -178,19 +178,7 @@ long measure_distance (int n) {
     d = li - 10.0;
   else 
     d = (us / 58.0) - 2 ; // 58 pour vitesse du son ; 2 cm longueur de l'autre capeur qui dépasse
-
-  if (DebugMode == true)
-  {
-    ecran.clear();
-    ecran.setPowerSave(0);
-    ecran.print (li);
-    ecran.print ("\n");
-    ecran.print (us);
-    ecran.print ("\n");
-    ecran.print (d);
-    ecran.print ("\n");
-  }
-  
+     
   return d;
   
 }
@@ -325,6 +313,35 @@ void initialize_bno055() {
 
 }
 
+int bin_get_compas (char outstr[])  // outstr supposed to have 6 Bytes available
+{  
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(2);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  // Request 4 bytes from the CMPS12
+  // this will give us both bytes of the 16 bit bearing, pitch and roll
+  Wire.requestFrom(CMPS12_ADDRESS, 4);       
+  while(Wire.available() < 4);        // Wait for all bytes to come back
+  
+  outstr[0] = Wire.read(); // head_high
+  outstr[1] = Wire.read(); // head_low
+  outstr[2] = Wire.read(); // pitch
+  outstr[3] = Wire.read(); // roll
+
+  
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(0x18);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  Wire.requestFrom(CMPS12_ADDRESS, 2);       
+  while(Wire.available() < 2);        // Wait for all bytes to come back
+  
+  outstr[4] = Wire.read(); // temp_high
+  outstr[5] = Wire.read(); // temp_low
+   
+  return (6); // number of bytes added
+}
 
 int get_compas (char *outstr, int outlen) {
   int8_t temp_high=0, temp_low=0, head_high=0, head_low=0, pitch=0, roll=0;
@@ -433,15 +450,14 @@ int get_compas (char *outstr, int outlen) {
   return (angle16/10);
 }
 
-void get_angle(char sequence) {
-  int a;
+void get_angle()
+{
   
-  a = get_compas (NULL, 0);
-  obuffer[0] = C_CMP;
-  obuffer[1] = sequence;
-  itoa (a, &(obuffer[2]), 10);
-
-  wifi_write();
+    obuffer[0] = C_CMP;
+    obuffer[1] = '\0';
+    get_compas (obuffer, 64); 
+  
+    wifi_write();
 }
 
 int get_lidar_val_i2c (byte *s)
@@ -634,6 +650,17 @@ void memoryFree()
 
 }
 
+int bin_get_memory (char outstr[])  // outstr supposed to have 2 Bytes available
+{  
+  int freeValue;
+
+  freeValue = freeMemory();
+  outstr[0] = highByte (freeValue); 
+  outstr[1] = lowByte (freeValue);
+  
+  return (2); // number of bytes added
+}
+
 void batteryLevel()
 {
   unsigned int raw_bat;
@@ -645,4 +672,17 @@ void batteryLevel()
   itoa (raw_bat, &(obuffer[1]), 10);
 
   wifi_write ();
+}
+
+int bin_get_battery (char outstr[])  // outstr supposed to have 2 Bytes available
+{  
+  unsigned int raw_bat;
+ 
+  analogReference (DEFAULT);
+  raw_bat = analogRead(A2);
+  
+  outstr[0] = highByte (raw_bat); 
+  outstr[1] = lowByte (raw_bat);
+  
+  return (2); // number of bytes added
 }

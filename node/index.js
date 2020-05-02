@@ -217,13 +217,19 @@ io.sockets.on('connection', function (socket) {
               socket.emit('sr1',chaine.substring(3));
         } else if (chaine.indexOf('SR2') == 0) {
               socket.emit('sr2',chaine.substring(3));
+        } else if (chaine.indexOf('STATUS') == 0) {
+            socket.emit('status',chaine.substring(6));
         } else if (chaine.indexOf('LOGF') == 0) {
               socket.emit('LogFileOK',chaine.substring(4));
         } else if (chaine.indexOf('ENG') == 0) {
               socket.emit('eng',chaine.substring(3));
+        } else if (chaine.indexOf('CLEARV') >= 0) {
+              socket.emit('clearv',chaine.substring(n+6));
+        } else if (chaine.indexOf('CLEARH') >= 0) {
+              socket.emit('clearh',chaine.substring(n+6));
         } else if (chaine.indexOf('PLOTH') >= 0) {
-              n = chaine.indexOf('PLOTH');
-              socket.emit('ploth',chaine.substring(n+5));
+                n = chaine.indexOf('PLOTH');
+                socket.emit('ploth',chaine.substring(n+5));
         } else if (chaine.indexOf('PLOTV') >= 0) {
               n = chaine.indexOf('PLOTV');
               socket.emit('plotv',chaine.substring(n+5));
@@ -233,6 +239,9 @@ io.sockets.on('connection', function (socket) {
         } else if (chaine.indexOf('DRAWMAPSCAN') >= 0) {
               n = chaine.indexOf('DRAWMAPSCAN');
               socket.emit('drawmapscan',chaine.substring(n+11));
+        } else if (chaine.indexOf('DRAWLOCATION') >= 0) {
+            n = chaine.indexOf('DRAWLOCATION');
+            socket.emit('drawlocation',chaine.substring(n+12));
         } else if (chaine.indexOf('DRAWMAPPATH') >= 0) {
               n = chaine.indexOf('DRAWMAPPATH');
               socket.emit('drawmappath',chaine.substring(n+11));

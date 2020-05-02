@@ -32,7 +32,7 @@ pid_t process;
 
 double pointsX[180];
 double pointsY[180];
-double mesures[180];
+double mesuresScan[180];
 
 int PlanClickAction = 0;
 // default 0 : indicate the place to go
@@ -49,8 +49,11 @@ extern unsigned char Sequence[];
 extern int RSSI[];
 extern int MemoryFree;
 extern int Compas;
+extern int DistL;
 extern int TopWIFICount;
 extern struct wifiref CurrentWifi; // the latest measured WIFI matrix
+extern struct scanref CurrentScanH; // the latest measured scans in 4 directions
+extern int CurrentHSP; // the latest measured heigth to ceiling
 
 int NoInterrupt = 0;
 
@@ -211,17 +214,12 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
     char message[128];
     int x, y, z;
     char *p;
-    double cap, angle, minAngle;
-    double spread, step;
+    double cap, angle;
     unsigned char cmd;
     char sequence, oldsequence;
 //    extern int RSSI[5];
     extern char PrimitiveResult;
 
-    double normX[180];
-    double normY[180];
-    int posx, posy, minx, miny;
-    double val;
     
     // structure :
     // Buffer[0] : la commande
@@ -245,21 +243,9 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
         }
         
         sequence = buffer[1];   // attention pas forcément implémenté sur chaque commande
-        // pour le moment C_SCANH, C_SCANV, C_MEM, C_CMP, C_PRI
+        // pour le moment C_SCANH, C_SCANV, C_MEM, C_PRI
         switch (cmd) {
-                
-            case C_PING :
-                if (debug_mode == 1)
-                    printf ("    ARD-->Server PING\n");
-                
-                control_message(MSG_INFO, "COLORTPing", 10);
-                
-                // the buffer contains head, roll, pitch and temperature
-                sscanf (&(buffer[1]), "%*d %*d %*d %d", &x);
-                sprintf (message, "TEMP %d", x);
-                control_message(MSG_INFO, message, 10);
-                break;
-                
+
             case C_LOG :
                 if (debug_mode == 1)
                     printf ("    ARD-->Server LOG %s\n",&(buffer[1]));
@@ -268,7 +254,11 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 break;
                 
             case C_CMP :
-                sscanf(&(buffer[2]), "%d", &x);
+            case C_PING :
+                
+                control_message(MSG_INFO, "COLORTPing", 10);
+                
+                sscanf (&(buffer[1]), "%d %*d %*d %d", &x, &y);
                 if ((x >= 0) && (x < 360))
                     Compas = compas_correction[x];
                 else
@@ -278,12 +268,19 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 }
                 
                 if (debug_mode == 1)
-                    printf ("    ARD-->Server CMP %d (%d)\n", x, Compas);
+                    printf ("    ARD-->Server CMP/PING %d (%d) - %d°\n", x, Compas, y);
                 
                 sprintf (message, "AXY %d", Compas);
                 control_message(MSG_INFO, message, 10);
+                sprintf (message, "TEMP %d", y);
+                control_message(MSG_INFO, message, 10);
                 break;
             
+            case C_STATUS :
+                
+                display_robot_status (&(buffer[1]));
+                break;
+                
             case C_LIDAR :
                 sscanf(&(buffer[3]), "%d", &x);
                 
@@ -325,6 +322,7 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 if (debug_mode == 1)
                     printf ("    ARD-->Server DISTL %s\n", &(buffer[1]));
                 
+                sscanf(&(buffer[1]), "%d", &DistL);
                 sprintf (message, "Distance Gauche : %s", &(buffer[1]));
                 control_message(MSG_INFO, message, 10);
                 break;
@@ -382,7 +380,7 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 sprintf (message, "received scan segment %c.", buffer[2] + '0');
                 control_message(MSG_INFO, message, 10);
                 draw_segment (buffer, buffer[2], C_SCANH);
-                consolidate_points (buffer, buffer[2], C_SCANH, pointsX, pointsY, mesures);
+                consolidate_points (buffer, buffer[2], C_SCANH, pointsX, pointsY, mesuresScan);
                 
                 if ((int) buffer[2] == 6)  // we received all the points
                 {
@@ -391,52 +389,21 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                         printf ("X = [");
                         for (x=0; x<180; x++)
                         {
-                            printf ("%f,",pointsX[x]);
+                            printf ("%.2f,",pointsX[x]);
                         }
                         printf ("]\n");
                         printf ("Y = [");
                         for (x=0; x<180; x++)
                         {
-                            printf ("%f,",pointsY[x]);
+                            printf ("%.2f,",pointsY[x]);
                         }
                         printf ("]\n");
                     }
-                    
-                    if (LocInProgress == 1) // this scan has been triggered as part of localization process
-                    {
-                        // we have to gather the current orientation and the zone we're in
-                        // orientation :
-                        // - we may suppose we're in the last orientation, thus -90°
-                        // - we may register a preferred orientation per zone and force it
-                        // - we may force a specific absolute orientation, and turn a bit if result is not good enough
-                        // - or we may just collect the current one (should be -90° unless blocked during last turn
-                        
-                        if (debug_mode == 1)
-                        {
-                            printf("lauchning map matching computation\n");
-                            printf("zone : %o\n", CurrentWifi.zone);
-                        }
-                        
-                        spread = 50.0;
-                        step = 5.0;        // actually fast, could use step of 5 degrees
-                        cap = 270.0;
-                        
-                        val = find_best_match (cap, spread, step, mesures, 180, &minx, &miny, &minAngle, normX, normY, CurrentWifi.zone);
-                        
-                        if (debug_mode == 1)
-                            printf ("Located at %d,%d - angle %.0f° - correlation %.3f \n",minx,miny, minAngle, val);
-                        draw_matched_scan (normX, normY, 180, minx, miny);
-                        CurrentLocX = minx;
-                        CurrentLocY = miny;
-                        LocInProgress =0;
-                        
-                    } else { // this scan has been requested for itself
-                        
-                        printf("Checking for objects\n");
-                        detectlines (pointsX, pointsY, mesures, 180, LineW, CovSeuil);
+
+                    printf("Checking for objects\n");
+                    detectlines (pointsX, pointsY, mesuresScan, 180, LineW, CovSeuil);
                         //          printf("Checking for path\n");
-                        //          detectpath (pointsX, pointsY, mesures, 180, PathW, PathD);
-                    }
+                        //          detectpath (pointsX, pointsY, mesuresScan, 180, PathW, PathD);
                 }
                 break;
                 
@@ -502,9 +469,8 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
 		}
         else if (!strncmp (buffer, "Test", 4) ) // the first 4 chars are equal to 'PING'
         {
-            message[0] = C_LIDAR;
-            message[1] = sequence;
-            message[2] = '\0';
+            message[0] = C_TEST;
+            message[1] = '\0';
             write_ard (ardfd, message);
         }
 		else if (!strncmp(buffer, "LED", 3))
@@ -628,7 +594,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
             {
                 printf ("located %s\n", message);
             }
-            LocInProgress = 1;
+//            LocInProgress = 1;
             sleep (1);
             
             if (LearningMode == 1)
@@ -641,10 +607,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
                 control_message(MSG_INFO, message, 10);
                 
                 // now launch a scan to trigger the map matching
-                message[0] = C_SCANH;
-                message[1] = sequence;
-                message[2] = '\0';
-                write_ard (ardfd, message);
+                find_best_location ();
             }
         }
         else if (!strncmp(buffer, "LOC_OK", 6))  // we get here only if LearnMode was activated
@@ -652,11 +615,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
             printf ("Localization approved\n");
             average_and_save_wifi (-1,-1);
             
-            // now launch a scan to trigger the map matching
-            message[0] = C_SCANH;
-            message[1] = sequence;
-            message[2] = '\0';
-            write_ard (ardfd, message);
+            find_best_location ();
         }
         else if (!strncmp(buffer, "LOC_NOK", 7)) // we get here only if LearnMode was activated
         {
@@ -817,14 +776,9 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
                         draw_path (pathx, pathy, m);
                 break;
                 
-                case 1 :  // we get here only if LearnMode was activated
+                case 1 :  // we get here only if LearnMode was activated, and locating
                     average_and_save_wifi (x,y);
-                    
-                    // now launch a scan to trigger the map matching
-                    message[0] = C_SCANH;
-                    message[1] = sequence;
-                    message[2] = '\0';
-                    write_ard (ardfd, message);
+                    find_best_location ();
                     PlanClickAction = 0;
                 break;
             }

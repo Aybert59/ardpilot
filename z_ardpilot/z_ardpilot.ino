@@ -37,7 +37,7 @@ const int WIFI_RST = 3;
 const int WIFI_ON = 4;
 const int TRIG_U = 2;   // capteur ultrason
 const int ECHO_U = 5;   // capteur ultrason
-
+const int BUZZER = 6;
 
 
 char ibuffer[64];  // optimisation, ne pas allouer de mémoire tampondans le scan des SSIDs
@@ -96,7 +96,8 @@ int posRepos2 = 90; // 0 a gauche, 180 a droite
 //
 //////////////////////////////////////////
 
-void info_print (char *message) {
+void info_print (char *message)
+{
   
    obuffer[0] = C_LOG;
    strcpy (&(obuffer[1]),  message);
@@ -104,8 +105,9 @@ void info_print (char *message) {
   
 }
 
-void led_blink (int cycles, int don, int doff) {
-int i;
+void led_blink (int cycles, int don, int doff)
+{
+  int i;
 
   for (i=0; i<cycles; i++) {
       digitalWrite (LED, HIGH);
@@ -114,24 +116,35 @@ int i;
       delay (doff);
   }
 }
-void send_robot_status () {
-    
-  delay (400);
-  obuffer[0] = C_PING;
-  obuffer[1] = '\0';
-  wifi_write();
 
+/*void send_robot_status ()
+{
+    
   delay (400);
   memoryFree();
   delay (400);
   batteryLevel();
   delay (400);
-  get_angle ('*');
+  get_angle ();
   ecran.print ("status complete\n");
   delay (400);
 }
+*/
+void send_bin_status ()
+{
+  unsigned char len = 1;
+  
+  obuffer[0] = C_STATUS;
+  
+  len += bin_get_compas (&(obuffer[len]));
+  len += bin_get_memory (&(obuffer[len]));
+  len += bin_get_battery (&(obuffer[len]));
 
-void reload_config_parameters() {
+  wifi_write_binary (len);
+}
+
+void reload_config_parameters()
+{
 
   obuffer[0] = C_PARM;
   obuffer[1] = '\0';
@@ -205,7 +218,7 @@ void terminate_setup () {
 
   PrimValue = 0;
   OldPrimValue = 0;
-
+  tone (BUZZER, 500, 20);
 }
 
 
@@ -230,7 +243,7 @@ void loop() {
       terminate_setup ();
       wifi_display_IP ();
             
-      send_robot_status ();
+      send_bin_status ();
 
       loop_cnt = 0;
       Primitive = P_NULL;
@@ -295,10 +308,10 @@ void loop() {
       }
     }
 
-    if ((Primitive == P_NULL) && (OldPrimitive != P_NULL)) {
+ //   if ((Primitive == P_NULL) && (OldPrimitive != P_NULL)) {
     // we just finished something, let's send health information
-      send_robot_status ();
-    }
+ //     send_robot_status ();
+ //   }
 
 /*    if (CallibCompas == true) {
       get_compas (true);    
@@ -306,12 +319,16 @@ void loop() {
 */    
     loop_cnt++; // in order to implement some functions at certain time only
 
-    if (loop_cnt > 1000000) // !! 1 000 000 corespond à peine à 7 secondes environ !!! (on peut aller jusqu'à 2 milliards ...)
+    if ((loop_cnt % 10000) == 0) // each 0.7 seconds then... More often is dangerous
+     {
+        send_bin_status ();
+     }
+      
+    if (loop_cnt > 1000000) // !! 1 000 000 coresponds to about 7 seconds  !!! (can go up to 2 billion ...)
     {
       if (wifi_check_TCP_connection() == true)
       {
         loop_cnt = 0;
-//        info_print ("Connection checked OK") ;
       } else
       {
         close_and_shutdown();
@@ -319,12 +336,17 @@ void loop() {
 //        WiFi.disconnect();
         resetFunc();  
       }
+
+      
       if (Initialisation == true)
       {
         Initialisation = false;
-//        ecran.setPowerSave(1);
+        ecran.setPowerSave(1);
       }
     }
+
+
+    
     
     OldPrimitive = Primitive;
     OldPrimValue = PrimValue;

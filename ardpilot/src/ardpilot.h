@@ -15,7 +15,7 @@ struct cellule
     unsigned char piece; // 4 msb : pièce, 4 lsb : zone dans la pièce
     // correspond aux deux premiers codes du fichier CSV, chacun entre 0 et F
     // par convention 00 = vide, 0F = mur
-    unsigned char WifiMatrix; // 0 : pas de matrice de référence ; n = numéro de la matrice mesurée
+    int HSP; // heigth to ceiling ; 0 = unknown
 };
 
 #define APPT_L 193
@@ -40,6 +40,13 @@ struct wifiref
     float distance; // store the distance from the robot while locating itself
 };
 
+struct scanref
+{
+    double Mesures[4][180];
+    int HSP;
+    int Delta[4]; // 0 N, 1 E, 2 S, 3 W
+};
+
 // prototypes
 
 void control_message (char action, char *message, int attente);
@@ -59,8 +66,11 @@ void check_voltage ();
 void check_free_mem ();
 void check_ping ();
 void get_top_wifi ();
+int set_tourelle (char sr, int angle);
+int get_HSP();
 void check_wifi_environment (char sequence);
 int get_health ();
+int get_scan (char dir);
 int analyze_environment ();
 int record_wifi_reference (int n);
 void average_and_save_wifi (int x, int y);
@@ -74,6 +84,8 @@ void draw_line (int xs, int ys, int xe, int ye);
 void draw_matched_scan (double x[], double y[], int taille, int posx, int posy);
 void display_room_from_matrix (unsigned int zone, char *color);
 void draw_path (int x[], int y[], int taille);
+void draw_location (int posx, int posy);
+void display_robot_status (unsigned char *buffer);
 
 // from read_config
 void read_plan();
@@ -93,6 +105,9 @@ int bloc_get_top_wifi ();
 int bloc_check_voltage ();
 int bloc_check_ping ();
 int bloc_get_compas ();
+int bloc_set_tourelle (char sr, int angle);
+int bloc_get_HSP ();
+int bloc_get_scan (char dir, double DestPointsX[], double DestPointsY[], double DestMesures[]);
 int locate_myself ();
 int stop_command_script(char *ScriptName);
 int run_command_script(char *ScriptName);
@@ -103,7 +118,10 @@ void oriente_nord (double points[], int taille, int orientation, double xnorm[],
 double find_best_match (double cap, double spread, double step, double mesures[], int taille, int *minx, int *miny, double *minAngle, double minNormX[], double minNormY[], unsigned char piece);
 int find_path_to (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
 
+
+// from navigation.c
 int get_path (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
 int lee_expansion (int ApptPath[][APPT_W], int level, int CurX, int CurY, int ToX, int ToY);
+int find_best_location ();
 
 #endif /* ardpilot_h */

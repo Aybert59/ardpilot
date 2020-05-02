@@ -22,6 +22,8 @@ extern int MaxMatrices;
 extern int ardfd;
 
 struct wifiref CurrentWifi; // the latest measured WIFI matrix
+struct scanref CurrentScanH; // the latest measured scans in 4 directions
+int CurrentHSP; // the latest measured heigth to ceiling
 
 void get_top_wifi ()
 {
@@ -70,8 +72,7 @@ void check_compas ()
     char message[4];
     
     message[0] = C_CMP;
-    message[1] = '\1';
-    message[2] = '\0';
+    message[1] = '\0';
     write_ard (ardfd, message);
 }
 
@@ -109,6 +110,45 @@ int get_health ()
     // récupérer vitesse des moteurs, position des servos ?
    
     return 0;
+}
+
+int set_tourelle (char sr, int angle)
+{
+    char message[16];
+    
+    message[0] = sr;
+    sprintf (&message[1], "%d", angle);
+    write_ard (ardfd, message);
+    
+    return 0;
+}
+
+int get_HSP ()
+{
+    char message[4];
+    struct timeval timeout;
+    
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 600000; // wait half a second
+ 
+    bloc_set_tourelle (C_SR2, 90);
+    bloc_set_tourelle (C_SR1, 180);
+    select(0, NULL, NULL, NULL, &timeout);
+    
+    message[0] = C_DISTL;
+    message[1] = '\0';
+    write_ard (ardfd, message);
+   
+    return 0;
+}
+
+int get_scan (char dir)
+{
+    char message[4];
+    
+     message[0] = dir;
+     message[1] = '\0';
+     write_ard (ardfd, message);
 }
 
 int mesure_wifi (int MatRef)
@@ -269,7 +309,8 @@ int locate_myself ()
     float d, dmin;
     char buffer[64];
     unsigned char len;
-
+    char log[128];
+    extern float MatrixPcent;
     
 //    control_message(MSG_WARNING, "\nBug #1 : may return empty result : run \"TopWifi\" once first\n", 0);
     control_message(MSG_WARNING, "Bug #2 : if blocked if the middle of the process click on the compass to release\n\n", 0);
@@ -322,9 +363,12 @@ int locate_myself ()
             }
         }
         
-        sleep (2);
+        bloc_get_scan (C_SCANH, NULL, NULL, CurrentScanH.Mesures[i]);
+        CurrentScanH.Delta[i] = 0;
     }
     
+    CurrentScanH.HSP = bloc_get_HSP ();
+        
     // step 1bis verify
     
     if (DebugMode == 1)
@@ -338,6 +382,19 @@ int locate_myself ()
             }
         }
         printf ("\n");
+        
+        printf ("current scans  :\n");
+        for (i=0; i<4; i++)
+        {
+            printf ("-- Orientation %d :\n", i);
+            for (j=0; j< 8; j++)
+            {
+                printf ("%.2f %.2f, ", CurrentScanH.Mesures[i][j]);
+            }
+            printf ("...\n");
+        }
+        
+        printf ("\ncurrent HSP : %d\n", CurrentScanH.HSP);
     }
 
     // step 2 find closest match in global matrices table
@@ -360,11 +417,15 @@ int locate_myself ()
         }
     }
     
+    CurrentWifi.zone = WifiMatrix[rang].zone;
+    CurrentWifi.distance = dmin;
+    
     // step 3 display results for WIFI
     
     if (DebugMode == 1)
     {
-        printf ("*** Closest matrix is %d ***\n\n",rang);
+        sprintf (log,"*** Closest matrix is %d ***\n",rang);
+        control_message(MSG_DEBUG, log, 10);
     }
     CurrentWifi.Releves = rang; // store here the number of the nearest matrix
     
@@ -373,21 +434,21 @@ int locate_myself ()
     
     for (i=0; i<MaxMatrices; i++)
     {
-        if (WifiMatrix[i].distance / dmin < 1.05)  // let's display matrices where distance is close by less than 5%
+        if ((WifiMatrix[i].distance / dmin < MatrixPcent)  &&
+            (i != rang))// let's display matrices where distance is close by less than 10%
         {
             if (DebugMode == 1)
             {
-                printf ("* Near matrix found %d *\n",i);
+                sprintf (log,"* Near matrix found %d *",i);
+                control_message(MSG_DEBUG, log, 10);
             }
-//            if (i != rang)
-//            {
-//                display_room_from_matrix (WifiMatrix[i].zone, "BurlyWood");
-//            }
+              //  display_room_from_matrix (WifiMatrix[i].zone, "BurlyWood"); //bug : cannot click on a drawed zone
         }
     }
     if (DebugMode == 1)
     {
-        printf ("end of location function\n");
+        sprintf (log,"end of location function");
+        control_message(MSG_DEBUG, log, 10);
     }
     return codeRet; // 1 = ok, 0 = pb de positionnement
 }
@@ -412,6 +473,7 @@ void average_and_save_wifi (int x, int y)
             if (WifiMatrix[i].zone == zone)
             {
                 MatrixToUpdate = i;
+                CurrentWifi.Releves = i;
             }
         }
     } else {

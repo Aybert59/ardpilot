@@ -71,8 +71,9 @@ void manage_command (byte len) {
   switch (cmd) {    // voir si on peut créer un tableau de fonctions ?
   
   case C_PING:
-  
-    obuffer[0] = C_PING;
+  case C_CMP:
+    
+    obuffer[0] = cmd;
     obuffer[1] = '\0';
     get_compas (obuffer, 64); 
   
@@ -95,83 +96,13 @@ void manage_command (byte len) {
       DebugMode = true;
     break;
 
-/*  case C_CALCMP:
-  
-    if (ibuffer[1] == 'T')
-    {
-      digitalWrite (LED, 1);
-      CallibCompas = true;
-      xmmin = 32767;
-      xmmax = -32768;
-      ymmin = 32767;
-      ymmax = -32768;
-      zmmin = 32767;
-      zmmax = -32768;
-      
-      xamin = 32767;
-      xamax = -32768;
-      yamin = 32767;
-      yamax = -32768;
-      zamin = 32767;
-      zamax = -32768;
-    }
-    else
-    {
-      digitalWrite (LED, 0);
-      CallibCompas = false;
-      delay (1000);
-   
-      obuffer[0] = C_CALCMP;
-      obuffer[1] = highByte (xmmin);
-      obuffer[2] = lowByte (xmmin);
-      obuffer[3] = highByte (xmmax);
-      obuffer[4] = lowByte (xmmax);
 
-      obuffer[5] = highByte (ymmin);
-      obuffer[6] = lowByte (ymmin);
-      obuffer[7] = highByte (ymmax);
-      obuffer[8] = lowByte (ymmax);
-
-      obuffer[9] = highByte (zmmin);
-      obuffer[10] = lowByte (zmmin);
-      obuffer[11] = highByte (zmmax);
-      obuffer[12] = lowByte (zmmax);
-
-      obuffer[13] = highByte (xamin);
-      obuffer[14] = lowByte (xamin);
-      obuffer[15] = highByte (xamax);
-      obuffer[16] = lowByte (xamax);
-
-      obuffer[17] = highByte (yamin);
-      obuffer[18] = lowByte (yamin);
-      obuffer[19] = highByte (yamax);
-      obuffer[20] = lowByte (yamax);
-
-      obuffer[21] = highByte (zamin);
-      obuffer[22] = lowByte (zamin);
-      obuffer[23] = highByte (zamax);
-      obuffer[24] = lowByte (zamax);
- 
-      wifi_write_binary(25);
-    }
-    break;
-*/
-/*  case C_LIDAR:
-  
-    get_lidar (sequence);
-    break;
-*/
   case C_SR1:
   case C_SR2:
   
     cap = atoi (&(ibuffer[1]));
     set_servo (cmd, sequence, cap);
      
-    break;
-    
-  case C_CMP:
-
-    get_angle(sequence);
     break;
     
   case C_I2CSCAN:
@@ -197,36 +128,7 @@ void manage_command (byte len) {
  /*      case F_XMMIN :
         xmmin = atoi(&(ibuffer[2])); 
       break;
-      case F_XMMAX :
-        xmmax = atoi(&(ibuffer[2])); 
-      break;
-      case F_YMMIN :
-        ymmin = atoi(&(ibuffer[2])); 
-      break;
-      case F_YMMAX :
-        ymmax = atoi(&(ibuffer[2])); 
-      break;
-      case F_ZMMIN :
-        zmmin = atoi(&(ibuffer[2])); 
-      break;
-      case F_ZMMAX :
-        zmmax = atoi(&(ibuffer[2])); 
-      break;
-      case F_XAMIN :
-        xamin = atoi(&(ibuffer[2])); 
-      break;
-      case F_XAMAX :
-        xamax = atoi(&(ibuffer[2])); 
-      break;
-      case F_YAMIN :
-        yamin = atoi(&(ibuffer[2])); 
-      break;
-      case F_YAMAX :
-        yamax = atoi(&(ibuffer[2])); 
-      break;
-      case F_ZAMIN :
-        zamin = atoi(&(ibuffer[2])); 
-      break;
+ 
       case F_ZAMAX :
         zamax = atoi(&(ibuffer[2])); 
       break;
@@ -246,8 +148,7 @@ void manage_command (byte len) {
         PngNum = atoi(&(ibuffer[2])); 
       break;
       case F_END :
-        strcpy (&(obuffer[1]), "Initialization complete...\n");  // keep this one as kind of prrof of read
-        wifi_write();
+        info_print ("Initialization complete...\n");  // keep this one as kind of prrof of read
       break;
       default :
 //        strcpy (&(obuffer[1]), "Unknown Parameter in config file");
@@ -290,6 +191,12 @@ void manage_command (byte len) {
   
     close_and_shutdown();
     break;
+
+  case C_TEST:
+  
+    play_melody (2, 1000);
+    break;
+    
     
   case C_PRI:
 

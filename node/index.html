@@ -63,7 +63,7 @@
                         size: 200
                     }],
                     yAxis: [{
-                        min: 4, max: 7.5,
+                        min: 5.5, max: 7,
                         minorTickPosition: 'outside',
                         tickPosition: 'outside',
                         tickInterval: 1,
@@ -72,15 +72,15 @@
                             rotation: 'auto',
                             distance: 15
                         },
-                        plotBands: [{ from: 4, to: 5.5,
+                        plotBands: [{ from: 5.5, to: 6,
                             color: '#F4FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        }, { from: 5.5, to: 6.62,
+                        }, { from: 6, to: 6.62,
                             color: '#82FA58',
                             innerRadius: '100%',
                             outerRadius: '105%'
-                        },{ from: 6.62, to: 8,
+                        },{ from: 6.62, to: 7,
                             color: '#FA5858',
                             innerRadius: '100%',
                             outerRadius: '105%'
@@ -142,11 +142,11 @@
                                                                   rotation: 'auto',
                                                                   distance: 15
                                                                   },
-                                                                  plotBands: [{ from: 0, to: 64,
+                                                                  plotBands: [{ from: 0, to: 128,
                                                                               color: '#FA5858',
                                                                               innerRadius: '100%',
                                                                               outerRadius: '105%'
-                                                                              }, { from: 64, to: 512,
+                                                                              }, { from: 128, to: 512,
                                                                               color: '#F4FA58',
                                                                               innerRadius: '100%',
                                                                               outerRadius: '105%'
@@ -252,17 +252,17 @@
                 // build the Servo control widgets
                                     
                 var options = {
-                                    start: 90,
-                                    range: {min: 0, max: 180},
-                                    step: 1,
-                                    tooltips: true,
-                                    format: wNumb({ decimals: 0  }),
-                                    pips: {
+                            start: 90,
+                            range: {min: 0, max: 180},
+                            step: 1,
+                            tooltips: true,
+                            format: wNumb({ decimals: 0  }),
+                            pips: {
                                     mode: 'values',
                                     values: [0, 45, 90, 135, 180],
                                     density: 2
                                     }
-                                };
+                            };
                                     
                 Slider1 = noUiSlider.create (document.getElementById('SliderSrv1'), options);
                 Slider2 = noUiSlider.create (document.getElementById('SliderSrv2'), options);
@@ -297,45 +297,73 @@
                           })
                                 
                 socket.on('axy', function(message) {
-                                    var series = compas.get('cmp');
-                                    var point = series.points[0];
+                        var series = compas.get('cmp');
+                        var point = series.points[0];
                           
-                                    point.update(parseInt(message));
-                                    series.show ();
-                                        })
+                        point.update(parseInt(message));
+                        series.show ();
+                        })
                     
                 socket.on('volt', function(message) {
-                                    var series = VoltMeter.get('vlt');
-                                    var point = series.points[0];
+                        var series = VoltMeter.get('vlt');
+                        var point = series.points[0];
                           
-                                    point.update(parseFloat(message));
-                                    series.show ();
-                                        })
+                        point.update(parseFloat(message));
+                        series.show ();
+                        })
                                 
                 socket.on('mem', function(message) {
-                                    var series = MemMeter.get('mem');
-                                    var point = series.points[0];
+                        var series = MemMeter.get('mem');
+                        var point = series.points[0];
                           
-                                    point.update(parseInt(message));
-                                    series.show ();
-                                        })
+                        point.update(parseInt(message));
+                        series.show ();
+                        })
                                 
                 socket.on('temp', function(message) {
-                          TempDisplay.draw (parseInt(message));
-                                        })
+                        TempDisplay.draw (parseInt(message));
+                        })
                 socket.on('sr1', function(message) {
-                                          Slider1.set (parseInt(message));
-                                          })
+                        Slider1.set (parseInt(message));
+                        })
                 socket.on('sr2', function(message) {
-                                          Slider2.set (parseInt(message));
-                                          })
+                        Slider2.set (parseInt(message));
+                        })
+                socket.on('status', function(message) {
+                        var dataset = message.split(' ');
+                        var series, point;
+
+                        // make the ping button green
+                        document.getElementById('Ping').style.background='LightGreen';
+                        
+                        // display heading
+                        series = compas.get('cmp');
+                        point = series.points[0];
+                        point.update(parseInt(dataset[1]));
+                        series.show ();
+                        
+                        // display temperature
+                        TempDisplay.draw (parseInt(dataset[2]));
+                        
+                        // display memory
+                        series = MemMeter.get('mem');
+                        point = series.points[0];
+                        point.update(parseInt(dataset[3]));
+                        series.show ();
+                        
+                        // display voltage
+                        series = VoltMeter.get('vlt');
+                        point = series.points[0];
+                        point.update(parseFloat(dataset[4]));
+                        series.show ();
+                        })
                                 
                 socket.on('LogFileOK', function(message) {
-                                        document.getElementById("TextBox").style.background='#E0F8E6';
-                                        $('#TextBox').append('Saving logs to ' + message);
-                                        if($('#TextBox').length)
-                                            $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
-                                        })
+                    document.getElementById("TextBox").style.background='#E0F8E6';
+                    $('#TextBox').append('Saving logs to ' + message);
+                    if($('#TextBox').length)
+                        $('#TextBox').scrollTop($('#TextBox')[0].scrollHeight - $('#TextBox').height());
+                    })
                                 
                 socket.on('eng', function(message) {
                              
@@ -413,36 +441,36 @@
                            
 
                 $('#Config').click(function () {
-                                        socket.emit('config', 'config');
-                                        })
+                        socket.emit('config', 'config');
+                        })
                                     
                 var annotH = [];
 
                 $('#ScanHorizon').click(function () {
-                                        var series = charth.get('ligneh');
+                        var series = charth.get('ligneh');
                                         
-                                        socket.emit('scan', 'h');
+                        socket.emit('scan', 'h');
                                         
-                                        series.remove ();
-                                        for (var ann of annotH) {
-                                            charth.removeAnnotation (ann);
-                                        }
-                                        annotH = [];
-                                        charth.addSeries ({
-                                                visible: false, showInLegend: false,
-                                                id: 'ligneh'
-                                        })})
+                        series.remove ();
+                        for (var ann of annotH) {
+                            charth.removeAnnotation (ann);
+                        }
+                        annotH = [];
+                        charth.addSeries ({
+                                visible: false, showInLegend: false,
+                                id: 'ligneh'
+                    })})
                 $('#ScanVertical').click(function () {
-                                        var series = chartv.get('lignev');
+                        var series = chartv.get('lignev');
                                          
-                                        socket.emit('scan', 'v');
+                        socket.emit('scan', 'v');
                                          
-                                        series.remove ();
-                                        chartv.addSeries ({
-                                                visible: false, showInLegend: false,
-                                                id: 'lignev'
-                                                })
-                                        })
+                        series.remove ();
+                        chartv.addSeries ({
+                                visible: false, showInLegend: false,
+                                id: 'lignev'
+                                })
+                        })
                 
              // creation des dessins
                                 
@@ -588,6 +616,15 @@
                                      {
                                      data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
                                      visible: false, showInLegend: true,
+                                     id: 'location', name: 'Me',
+                                     marker: {
+                                     enabled: true,
+                                     symbol: 'diamond',
+                                     radius: 3
+                                     }},
+                                     {
+                                     data: [{x: 0, y:0}], // nécessaire d'avoir un point à l'initialisation
+                                     visible: false, showInLegend: true,
                                      id: 'path', name: 'Path',
                                      marker: {
                                      enabled: true,
@@ -633,6 +670,32 @@
                     {
                         cell = dataset[i].split(",").map(Number);
                         series.addPoint (cell, false);
+                    }
+                    
+                    series.update ({ color: couleur });
+                    series.setVisible (true);
+                    plan.redraw();
+                });
+                
+                socket.on('drawlocation', function(message) {
+                                          
+                    var msg = message.trim();
+                    var delim = msg.indexOf(' ');
+                    var couleur = msg.slice (0, delim);
+                    var donnees = msg.slice (delim+1);
+                          
+                          
+                    var dataset = donnees.split(' ');
+                    var series = plan.get('location');
+                    
+                    for (var i=0; i < series.points.length; i++)
+                    {
+                        series.removePoint([i]);
+                    }
+                    for (var i=0; i < dataset.length; i++)
+                    {
+                        cell = dataset[i].split(",").map(Number);
+                        series.addPoint (cell, true);
                     }
                     
                     series.update ({ color: couleur });
@@ -690,6 +753,30 @@
                     plan.redraw();
                 });
                                 
+                socket.on('clearh', function(message) {
+                          var series = charth.get('ligneh');
+                          series.remove ();
+                          for (var ann of annotH) {
+                              charth.removeAnnotation (ann);
+                          }
+                          annotH = [];
+                          charth.addSeries ({
+                                  visible: false, showInLegend: false,
+                                  id: 'ligneh'
+                                  })
+                          series.show ();
+                });
+                          
+                socket.on('clearv', function(message) {
+                          var series = chartv.get('lignev');
+                          series.remove ();
+                          chartv.addSeries ({
+                                  visible: false, showInLegend: false,
+                                  id: 'lignev'
+                                  })
+                          series.show ();
+                });
+                          
                 socket.on('ploth', function(message) {
                           var plotArray = message.split (' ');
                           var series = charth.get('ligneh');

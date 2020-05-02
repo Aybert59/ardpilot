@@ -308,8 +308,8 @@ double find_best_match (double cap, double spread, double step, double mesures[]
                           
     for (angle = cap - spread; angle <= cap + spread; angle += step)
     {
-        if (DebugMode == 1)
-            printf("orientation : %.0f°\n", angle);
+//        if (DebugMode == 1)
+//            printf("orientation : %.0f°\n", angle);
                                                   
             oriente_nord (mesures, 180, angle, normX, normY);
             val = map_match (normX, normY, 180, piece, &posx, &posy); // finds the best match for this orientation
@@ -317,8 +317,8 @@ double find_best_match (double cap, double spread, double step, double mesures[]
             if (val < minval)
             {
                 // this match is better than the ones before
-                if (DebugMode == 1)
-                    printf("best match found %.0f°\n", angle);
+ //               if (DebugMode == 1)
+ //                   printf("best match found %.0f°\n", angle);
                                   
                 minval = val;
                 *minx = posx;
@@ -347,14 +347,9 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
     double distance = 20000.0 * 180; /// max value for a whole scan
     double value;
     
-//    if (DebugMode == 1)
-//        for (p=0; p<taille; p++)
-//            printf ("point %.0f,%.0f\n", x[p], y[p]);
     
     for (i=0; i<APPT_L; i++)
     {
-//        if (DebugMode == 1)
-//            printf ("testing line %d\n", i);
         
         for (j=0; j<APPT_W; j++)
         {
@@ -380,10 +375,6 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
                         value += 20000.0;
                 }
             
-            
-//            if (DebugMode == 1)
-//                printf ("Found %.0f at %d,%d\n", value,i,j);
-            
                 if (value < distance)
                 {
                     distance = value;
@@ -394,158 +385,162 @@ double map_match (double x[], double y[], int taille, unsigned char piece, int *
             }
         }
     }
-    
     return (sqrt(distance));
-
 }
 
-int find_path_to (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY)
+int find_best_location ()
 {
-    int PathLength = 0; // should not exceed TailleMax (truncate ?)
-    
-    if (Appartement[ToX][ToY].piece == 0x0F)    // can't get into a wall !
-        return -1;
-    
-    PathLength = get_path (x, y, TailleMax, CurX, CurY, ToX, ToY);
-    
-    if (DebugMode ==1)
-        printf ("Raw path length : %d\n", PathLength);
-    
-    return PathLength;
-}
-
-
-int lee_expansion (int ApptPath[][APPT_W], int level, int CurX, int CurY, int ToX, int ToY)
-{
-    int i,j;
-    int k,l;
+    double spread, step, cap;
+    int minx[4], miny[4];
+    double minAngle[4];
+    double dist[4];
+    int i, orientation, rang;
+    extern struct wifiref WifiMatrix[];
+    extern struct wifiref CurrentWifi;
+    extern int MaxMatrices;
+    extern struct scanref CurrentScanH;
+    float dmin;
+    double normX[180];
+    double normY[180];
+    int FinalX, FinalY;
+    int avgX, avgY;
+    double val[4];
+    double minVal, allVal, sigma;
+    extern int CurrentLocX;
+    extern int CurrentLocY;
+    extern int LearningMode;
+    extern float MatrixPcent;
+    extern int Spread;
+    extern int CurrentHSP;
+    char log[128];
+    int x,y;
     int found = 0;
     
-    // check all the appt cells. if they are close to level then mark them as level +1
-    // for efficiency limit the search to a square limited to "level" distance around the dest point
-    
-    for (i = ToY-level; i <= ToY+level; i++)
-        for (j = ToX-level; j <= ToX+level; j++)
-            if ((i >= 0) && (i < APPT_L) && (j >= 0) && (j < APPT_W)) // stay within boundaries
-                if (ApptPath[i][j] == 0)                // no wall and not yet tagged
-                {
-                    // then search a cell of value "level" in the boundaries
-                    for (k = i-1; k <= i+1; k++)
-                        for (l = j-1; l <= j+1; l++)
-                            if ((k >= 0) && (k < APPT_L) && (l >= 0) && (l < APPT_W))
-                                if (ApptPath[k][l] == level)
-                                {
-                                    ApptPath[i][j] = level + 1;
-                                    if ((i == CurY) && (j == CurX))
-                                        found = 1;
-                                }
-                }
-    
-    return found;
-}
-
-int get_path (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY)
-{
-    extern float ApptDistances [APPT_L+BORDER*2][APPT_W+BORDER*2];
-    int ApptPath [APPT_L][APPT_W];
-    int i,j;
-    int k;
-    int level=1;
-    int Tolerance = 30; // distance under which we should not go, close to a wall
-FILE *fd;
-    
-    // initiate ApptPath by blacking walls + cells too close (< Tolerance)
-    
-    for (i=0; i<APPT_L; i++)
-        for (j=0; j<APPT_W; j++)
-            if (ApptDistances[i+BORDER][j+BORDER] < 20)
-                ApptPath[i][j] = -1;
-            else
-                ApptPath[i][j] = 0;
-    
-    ApptPath[ToY][ToX] = 1; // we'll start the expansion with the detination point
-    while (lee_expansion (ApptPath, level, CurX, CurY, ToX, ToY) == 0)
-        level++;
-    
-    
-    // si level > 300 : problème de longeur !
-    // opportunité de faire un malloc ?
-    
-    
-/*
-    //debug
-    printf ("writing lee expanded file\n");
-    fd = fopen ("/home/olivier/projets/ardpilot/lee_test", "w");
-    if (fd != NULL)
+    if (DebugMode == 1)
     {
-        for (i=0; i<(APPT_L); i++)
+        printf("lauchning map matching computation\n");
+    }
+ 
+    step = 5.0;
+    
+    minVal = 99999999.0;
+    
+    // bug ici, ne prend pas en compte ce qu'on vient de cliquer
+    sprintf (log, "MaxMatrices %d, learned %d", MaxMatrices, CurrentWifi.Releves);
+    control_message(MSG_DEBUG, log, 10);
+    
+    for (i=0; i<MaxMatrices; i++)
+    {
+        printf ("Testing %d\n", i);
+        if ((LearningMode == 0) || (i == CurrentWifi.Releves))
         {
-            for (j=0; j<(APPT_W); j++)
+            if ((LearningMode ==1) || (WifiMatrix[i].distance / CurrentWifi.distance < MatrixPcent))
+                    // let's only test matrices where distance is close by less than 10%
             {
-                fprintf (fd, "%d ", ApptPath[i][j]);
+                if (DebugMode == 1)
+                {
+                    sprintf (log,"* Testing zone %x within %.2fpc*", WifiMatrix[i].zone, MatrixPcent);
+                    control_message(MSG_DEBUG, log, 10);
+                }
+
+                // grab the best map_match for each 4 direction
+            
+                for (orientation = 0; orientation < 4; orientation++)
+                {
+                    val[orientation] = find_best_match (orientation*90, Spread, step,
+                            CurrentScanH.Mesures[orientation], 180,
+                            &(minx[orientation]), &(miny[orientation]), &(minAngle[orientation]),
+                            normX, normY, WifiMatrix[i].zone);
+                    if (DebugMode == 1)
+                    {
+                        sprintf (log,"--- found %d,%d", minx[orientation], miny[orientation]);
+                        control_message(MSG_DEBUG, log, 10);
+                    }
+
+                }
+
+                
+                allVal = sqrt (val[0]*val[0] + val[1]*val[1] + val[2]*val[2] + val[3]*val[3]);
+                avgX = (minx[0] + minx[1] + minx[2] + minx[3])/4;
+                avgY = (miny[0] + miny[1] + miny[2] + miny[3])/4;
+ 
+                // compute distance between 4 points :
+                // should be close enough to each other (within 25cm circle)
+                for (orientation = 0; orientation < 4; orientation++)
+                   dist[orientation] = sqrt (((avgX - minx[orientation]) * (avgX - minx[orientation])) +
+                    ((avgY - miny[orientation]) * (avgY - miny[orientation])));
+                
+                sigma = (dist[0] + dist[1] + dist[2] + dist[3])/4;
+                allVal *= sigma; // combination of 4 good matching and points close to each other
+                
+                // if we recognize HSP in the neighborhood then lower allVal by 20% to raise its chance
+                found = 0;
+                for (x = avgX - 2; x <= avgX + 2; x++)
+                  for (y = avgY - 2; y <= avgY + 2; y++)
+                      if ((Appartement[y][x].HSP >= CurrentHSP-2) &&
+                                (Appartement[y][x].HSP <= CurrentHSP+2))
+                      {
+                          found = 1;
+                      }
+                if (found == 1)
+                {
+                    if (DebugMode == 1)
+                    {
+                        sprintf (log,"HSP %d recognized in zone %x",CurrentHSP,WifiMatrix[i].zone);
+                        control_message(MSG_DEBUG, log, 10);
+                    }
+                    allVal *= 0.8;
+                }
+                      
+                if (DebugMode == 1)
+                {
+                    sprintf (log,"* Results : Val %.2f, avgX : %d, avgY : %d",allVal,avgX, avgY);
+                    control_message(MSG_DEBUG, log, 10);
+                }
+
+                // compute distance between 4 points :
+                // should be close enough to each other (within 25cm circle)
+                
+                for (orientation = 0; orientation < 4; orientation++)
+                    dist[orientation] = sqrt (((avgX - minx[orientation]) * (avgX - minx[orientation])) +
+                       ((avgY - miny[orientation]) * (avgY - miny[orientation])));
+                
+                
+                if (DebugMode == 1)
+                {
+                    for (orientation = 0; orientation < 4; orientation++)
+                    {
+                        sprintf (log,"* dist[%d] : %.2f",orientation,dist[orientation] );
+                        control_message(MSG_DEBUG, log, 10);
+                    }
+                }
+                
+                if (allVal < minVal)
+                {
+                    minVal = allVal;
+                    FinalX = avgX;
+                    FinalY = avgY;
+                }
+            
+                if (WifiMatrix[i].zone == CurrentWifi.zone)
+                {
+                    // preferred zone : let's increase score ?
+                    // not yet as not precise enough
+                }
             }
-            fprintf (fd, "\n");
         }
-        fclose (fd);
     }
-*/
     
-    // now trace back the proper path
-    
-    k = 0;
-    
-    i = CurY;
-    j = CurX;
-    
-    while (level >= 0)
+    if (DebugMode == 1)
     {
-        if (ApptPath[i-1][j] == level)
-        {
-            x[k]=j;
-            y[k]=i-1;
-        } else if (ApptPath[i+1][j] == level)
-        {
-            x[k]=j;
-            y[k]=i+1;
-        } else if (ApptPath[i][j-1] == level)
-        {
-            x[k]=j-1;
-            y[k]=i;
-        } else if (ApptPath[i][j+1] == level)
-        {
-            x[k]=j+1;
-            y[k]=i;
-        } else if (ApptPath[i-1][j-1] == level)
-        {
-            x[k]=j-1;
-            y[k]=i-1;
-        } else if (ApptPath[i+1][j+1] == level)
-        {
-            x[k]=j+1;
-            y[k]=i+1;
-        } else if (ApptPath[i+1][j-1] == level)
-        {
-            x[k]=j-1;
-            y[k]=i+1;
-        } else if (ApptPath[i-1][j+1] == level)
-        {
-            x[k]=j+1;
-            y[k]=i-1;
-        }
-        
-        i=y[k];
-        j=x[k];
-        level--;
-        k++;
+        sprintf (log,"Located at %d,%d - correlation %.3f \n",FinalX,FinalY, minVal);
+        control_message(MSG_DEBUG, log, 10);
     }
-        
-/* debug
- 
-    for (level=0;level<=k;level++)
-        printf ("step %d - %d,%d\n", level, x[level], y[level]);
- 
-*/
-    return k; // path length
-        
+    // dessiner les 4 ? mettre un point sur le robot ?
+//   draw_matched_scan (normX, normY, 180, minx, miny);
+    draw_location (FinalX, FinalY);
+    CurrentLocX = FinalX;
+    CurrentLocY = FinalY;
+
 }
 

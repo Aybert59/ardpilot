@@ -59,6 +59,8 @@ float CovSeuil = 50.0;
 int LineW = 30;
 int PathW = 25;
 int PathD = 80;
+float MatrixPcent = 1.2;
+int Spread = 30;
 
 void read_compas_correction()
 {
@@ -127,10 +129,10 @@ void read_and_send_config ()
     char message[32], msg[32];
     static int first_time = 1;
     int count = 0;
-    
+    char log[64];
     extern int DebugMode;
     extern int LearningMode;
-    
+    extern int CurrentHSP;
 
     if (first_time == 1)
     {
@@ -199,6 +201,10 @@ void read_and_send_config ()
                     sscanf (line, "%*s %d", &PathW);
                 else if (!strncmp(line, "PATHD", 5))
                     sscanf (line, "%*s %d", &PathD);
+                else if (!strncmp(line, "SPREAD", 5))
+                    sscanf (line, "%*s %d", &Spread);
+                else if (!strncmp(line, "MATRIX_PCENT", 5))
+                    sscanf (line, "%*s %f", &MatrixPcent);
                 else if (!strncmp(line, "ENDOFPARMS", 10))
                     message[1] = F_END;
                 
@@ -208,22 +214,27 @@ void read_and_send_config ()
         }
         free (line);
         fclose (fd);
-        printf ("Read %d parameters in Config file\n", count);
+        sprintf (log, "Read %d parameters in Config file", count);
+        control_message(MSG_DEBUG, log, 10);
     } else {
-        printf ("Config file unreadable !\n");
+        control_message(MSG_DEBUG, "Config file unreadable !", 10);
     }
     
 
-        printf ("Reading compas correction file\n");
+    control_message(MSG_DEBUG, "Reading compas correction file", 10);
     read_compas_correction();
-    
 
-        printf ("refreshing health information\n");
+    control_message(MSG_DEBUG, "refreshing health information", 10);
     get_health();
+/*
+    printf ("scanning networks\n");
+    bloc_get_top_wifi (); // we have to do it once -- not any more
     
-
-        printf ("scanning networks\n");
-    bloc_get_top_wifi (); // we have to do it once -- not any more 
+    printf ("checking HSP\n");
+    bloc_get_HSP ();
+    sprintf (message, "HSP : %d\n", CurrentHSP);
+    control_message(MSG_INFO, message, 10);
+ */
 }
 
 void init_appt_distances ()
@@ -337,7 +348,7 @@ void read_plan()
     int cellule;
     int start, end;
     int piece, zone;
-    int wifi_ref;
+    int hsp;
     int i,j;
     
     // initialisation
@@ -386,9 +397,9 @@ void read_plan()
                         
                     default:
 
-                        sscanf (&(line[start]), "%x-%o-%d", &piece, &zone, &wifi_ref);
+                        sscanf (&(line[start]), "%x-%o-%d", &piece, &zone, &hsp);
                         Appartement[lines][cellule].piece = (unsigned char) (piece * 16 + zone);
-
+                        Appartement[lines][cellule].HSP = hsp;
                         break;
                 }
                 

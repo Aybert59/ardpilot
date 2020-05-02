@@ -6,6 +6,7 @@
 #include "ardpilot_grammar.h"
 #define PIsur180 0.0174532925
 #define AJUSTEMENT_ANGLE_SCAN 2
+#define LONGUEUR_LIDAR 7.5
 
 extern int DebugMode;
 
@@ -22,27 +23,30 @@ void draw_segment (char *buffer, char segment, char orientation)
     int x, y;
     int msb, lsb;
     
+    if (segment == 1)
+    {
+        if (orientation == C_SCANH)
+            sprintf (message,"CLEARH");
+        else
+            sprintf (message,"CLEARV");
+    }
+    control_message(MSG_INFO, message, 10);
+    
     if (orientation == C_SCANH)
         strcpy (message,"PLOTH");
     else
         strcpy (message,"PLOTV");
 
+    
     for (i=0; i<30; i++)
     {
         
         angle = ((((int) segment - 1) * 30) + i - AJUSTEMENT_ANGLE_SCAN) * PIsur180; // -2 ajustement pour "redresser" l'image obtenue
-//printf ("%d,",(((int) segment - 1) * 30) + i);
-//printf ("-- %f - ", angle);
-//-        msb = (int) (buffer[(i*2)+3]) - 128;
+
         msb = (int) (buffer[(i*2)+3]);
         lsb = (int) (buffer[(i*2)+4]);
-        //       dist = ((msb * 256) + lsb) / 58.0 ; // Ultrasonic : The speed of sound is 340 m/s or 29 microseconds per centimeter.
-                                             // The ping travels out and back so divide by 2
-        dist = ((msb * 256) + lsb);
-        
-//printf ("%f,",dist);
-//printf ("%d+%d %f - ",msb,lsb,dist);
-        
+        dist = ((msb * 256) + lsb) + LONGUEUR_LIDAR;
+               
         // puis calculer x et y en fonction distance et angle
         if (orientation == C_SCANH)
         {
@@ -58,8 +62,7 @@ void draw_segment (char *buffer, char segment, char orientation)
             x = (int) round (fx);
             y = (int) round (fy);
         }
-//printf ("%1f,%1f\n",fx,fy);
-        
+
         sprintf (temp, " %d %d", x, y);
         strcat (message, temp);
     }
@@ -80,7 +83,7 @@ void consolidate_points (char *buffer, char segment, char orientation, double X[
         angle = degre * PIsur180;
         msb = (int) (buffer[(i*2)+3]);
         lsb = (int) (buffer[(i*2)+4]);
-        dist = ((msb * 256) + lsb);
+        dist = ((msb * 256) + lsb) + LONGUEUR_LIDAR;
         
         // puis calculer x et y en fonction distance et angle
         if (orientation == C_SCANH)
@@ -191,6 +194,19 @@ void draw_matched_scan (double x[], double y[], int taille, int posx, int posy)
     }
 }
 
+void draw_location (int posx, int posy)
+{
+    char message[32];
+ 
+    sprintf (message,"DRAWLOCATION Red  %d,%d", posx, posy);
+    control_message(MSG_INFO, message, 10);
+//    if (DebugMode == 1)
+            printf ("%s\n",message);
+}
+
+
+
+
 void draw_path (int x[], int y[], int taille)
 {
     char message[400];
@@ -252,4 +268,45 @@ void display_room_from_matrix (unsigned int zone, char *color)
         control_message(MSG_INFO, message, 0);
         
     }
+}
+
+
+void display_robot_status (unsigned char *buffer)
+{
+    // format of buffer :
+    // from 0 to 5 | headH | headL | pitch | roll | tempH | tempL |
+    
+    int head, pitch, roll, temp;
+    int Compas;
+    int memory;
+    float volts;
+    char message[64];
+    extern int compas_correction[];
+    
+    head = ((int)(buffer[0]) * 256 + (int)(buffer[1])) / 10; // CMP12 gives heading at .1 degree precision
+    pitch = (int)(buffer[2]);
+    roll = (int)(buffer[3]);
+    temp = (int)(buffer[4]) * 256 + (int)(buffer[5]);
+    
+    if ((head >= 0) && (head < 360))
+        Compas = compas_correction[head];
+    else
+    {
+        printf ("    ARD-->Server STATUS %d weird head value\n", head);
+        Compas = 0;
+    }
+    
+    memory = (int)(buffer[6]) * 256 + (int)(buffer[7]);
+    volts = ((int)(buffer[8]) * 256 + (int)(buffer[9])) * 10.0 / 1023;
+    
+/*    if (DebugMode == 1) // in case of emergency only (too noisy)
+    {
+        printf ("    ARD-->Server STATUS head : %d (%d) - temp : %d°\n", head, Compas, temp);
+        printf ("    ARD-->Server STATUS memory : %d - voltage : %.2f°\n", memory, volts);
+    }
+ */
+    
+    
+    sprintf (message, "STATUS %d %d %d %.2f", Compas, temp, memory, volts);
+    control_message(MSG_INFO, message, 10);
 }

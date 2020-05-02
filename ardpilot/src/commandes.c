@@ -24,6 +24,7 @@
 
 extern int ardfd, cmdfd, scriptfd, scriptWritefd;
 extern int cap_correction[];
+extern int CurrentHSP;
 unsigned char Sequence[256];
 pid_t RunningScript = (pid_t) NULL;
 
@@ -32,6 +33,7 @@ int RSSI[5];
 int MemoryFree = 2048;
 char PrimitiveResult = 'T';
 int Compas = 0;
+int DistL = 0;
 
 extern int NoInterrupt;
 
@@ -161,6 +163,51 @@ int bloc_check_ping ()
     do
         check_ping ();
     while (boucle_attente (C_PING, 2000, 0));
+}
+
+int bloc_set_tourelle (char sr, int angle)
+{
+    do
+        set_tourelle (sr, angle);
+    while (boucle_attente (sr, 2000, 0));
+}
+
+int bloc_get_HSP ()
+{
+    do
+        get_HSP ();
+    while (boucle_attente (C_DISTL, 2000, 0));
+    
+    CurrentHSP = DistL;
+    return (CurrentHSP);
+}
+
+int bloc_get_scan (char dir, double DestPointsX[], double DestPointsY[], double DestMesures[])
+{
+    int count;
+    extern double pointsX[];
+    extern double pointsY[];
+    extern double mesuresScan[];
+    
+    get_scan (dir);
+    
+    for (count=0; count < 6; count++)
+    {
+        while (boucle_attente (dir, 4000, 0));
+    }
+    
+    if ((DestPointsX != NULL) && (DestPointsY != NULL))
+        for (count=0; count < 180; count++)
+        {
+            DestPointsX[count] = pointsX[count];
+            DestPointsY[count] = pointsY[count];
+        }
+    
+    if (DestMesures != NULL)
+        for (count=0; count < 180; count++)
+        {
+            DestMesures[count] = mesuresScan[count];
+        }
 }
 
 char bloc_primitive_avant (int vitesse, int distance) // distance en mm
