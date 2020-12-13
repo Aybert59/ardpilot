@@ -111,17 +111,21 @@ int bloc_get_scan (char dir, double DestPointsX[], double DestPointsY[], double 
 int locate_myself ();
 int stop_command_script(char *ScriptName);
 int run_command_script(char *ScriptName);
+char bloc_primitive_avant (int vitesse, int distance);
+char bloc_primitive_spot_turn (int cap_demande);
 
 // from calculs.c
 double map_match (double x[], double y[], int taille, unsigned char piece, int *posx, int *posy);
 void oriente_nord (double points[], int taille, int orientation, double xnorm[], double ynorm[]);
 double find_best_match (double cap, double spread, double step, double mesures[], int taille, int *minx, int *miny, double *minAngle, double minNormX[], double minNormY[], unsigned char piece);
 int find_path_to (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
-
+double correlationPearsonInt (int tableauX[], int tableauY[], int tailleTableau);
 
 // from navigation.c
 int get_path (int x[], int y[], int TailleMax, int CurX, int CurY, int ToX, int ToY);
 int lee_expansion (int ApptPath[][APPT_W], int level, int CurX, int CurY, int ToX, int ToY);
 int find_best_location ();
+int navigate_to (int pathx[], int pathy[], int taille);
+int path_next_segment (int x[], int y[], int taille, int step, int *head, int *len);
 
 #endif /* ardpilot_h */

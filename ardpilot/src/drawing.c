@@ -237,8 +237,6 @@ void draw_path (int x[], int y[], int taille)
         if (point == 1)
         {
             control_message(MSG_INFO, message, 10);
-            if (DebugMode == 1)
-                printf ("%s-\n",message);
         }
     }
     
@@ -280,6 +278,7 @@ void display_robot_status (unsigned char *buffer)
     int Compas;
     int memory;
     float volts;
+    unsigned int CalibrationState, calibration;
     char message[64];
     extern int compas_correction[];
     
@@ -287,6 +286,7 @@ void display_robot_status (unsigned char *buffer)
     pitch = (int)(buffer[2]);
     roll = (int)(buffer[3]);
     temp = (int)(buffer[4]) * 256 + (int)(buffer[5]);
+    
     
     if ((head >= 0) && (head < 360))
         Compas = compas_correction[head];
@@ -298,15 +298,20 @@ void display_robot_status (unsigned char *buffer)
     
     memory = (int)(buffer[6]) * 256 + (int)(buffer[7]);
     volts = ((int)(buffer[8]) * 256 + (int)(buffer[9])) * 10.0 / 1023;
+    CalibrationState = (unsigned int) buffer[10];
+    // seuls les bits 7 et 8 semblent significatifs
+    calibration = CalibrationState >> 6;
     
-/*    if (DebugMode == 1) // in case of emergency only (too noisy)
+ /*   if (DebugMode == 1) // in case of emergency only (too noisy)
     {
-        printf ("    ARD-->Server STATUS head : %d (%d) - temp : %d°\n", head, Compas, temp);
+      printf ("    ARD-->Server STATUS head : %d (%d) - temp : %d°\n", head, Compas, temp);
         printf ("    ARD-->Server STATUS memory : %d - voltage : %.2f°\n", memory, volts);
+
+        printf ("Calibration : %X %d\n", CalibrationState, calibration);
     }
  */
     
     
-    sprintf (message, "STATUS %d %d %d %.2f", Compas, temp, memory, volts);
+    sprintf (message, "STATUS %d %d %d %.2f %d", Compas, temp, memory, volts, calibration);
     control_message(MSG_INFO, message, 10);
 }

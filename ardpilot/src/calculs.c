@@ -10,6 +10,7 @@
 extern int DebugMode;
 extern struct cellule Appartement[APPT_L][APPT_W];
 extern float ApptDistances[APPT_L+BORDER*2][APPT_W+BORDER*2]; // appartment size + 1 meter all around
+extern char LogMsg[];
 
 // from http://www.tangentex.com/RegLin.htm
 void RegLineaire (double x[], double y[], int n, double *a, double *b)
@@ -65,6 +66,40 @@ double correlationPearson (double tableauX[], double tableauY[], int tailleTable
     // ((n*sommeXY)-sommeX*sommeY)/Racine((n*sommeXiCarre-(sommeX)^2)*(n*sommeYiCarre-(sommeY)^2))
     r=((tailleTableau*sommeXY)-sommeX*sommeY)/sqrt((tailleTableau*sommeXiCarre-pow(sommeX,2.0))*(tailleTableau*sommeYiCarre-pow(sommeY,2.0)));
     return r; 
+}
+
+double correlationPearsonInt (int tableauX[], int tableauY[], int tailleTableau)
+{
+    double sommeXY=0; //somme des Xi*yi
+    double sommeX=0;//somme des Xi
+    double sommeY=0;//somme des Yi
+    double sommeXiCarre=0;//somme des xi carré
+    double sommeYiCarre=0;
+    double r;
+    int i=0;
+    double X, Y;
+    
+
+    for( i=0; i<tailleTableau; i++)
+    {
+        X = tableauX[i] * 1.0;
+        Y = tableauY[i] * 1.0;
+        sommeX+=X;
+        sommeY+=Y;
+        sommeXiCarre+=pow(X, 2.0);
+        sommeYiCarre+=pow(Y, 2.0);
+        sommeXY=sommeXY+(X*Y);
+    }
+    
+    //formule coefficient de correlation de pearson
+    // ((n*sommeXY)-sommeX*sommeY)/Racine((n*sommeXiCarre-(sommeX)^2)*(n*sommeYiCarre-(sommeY)^2))
+    if (((tailleTableau*sommeXY)-sommeX*sommeY) == 0)
+    {
+        return 1;
+    }
+    r=((tailleTableau*sommeXY)-sommeX*sommeY)/sqrt((tailleTableau*sommeXiCarre-pow(sommeX,2.0))*(tailleTableau*sommeYiCarre-pow(sommeY,2.0)));
+    
+    return r;
 }
 
 double covariance (double tableauX[], double tableauY[], int tailleTableau)
@@ -137,7 +172,7 @@ void detectlines (double x[], double y[], double points[], int taille, int ecart
             while ((c > precision) && ((i + largeur) < taille))
             {
                 largeur++;
-                c = fabsf (correlationPearson (&(x[i + largeur - ecart]), &(y[i+ largeur - ecart]), largeur));
+                c = fabs (correlationPearson (&(x[i + largeur - ecart]), &(y[i+ largeur - ecart]), largeur));
             }
             largeur--;
             c = fabs (correlationPearson (&(x[i]), &(y[i]), largeur));
@@ -412,7 +447,6 @@ int find_best_location ()
     extern float MatrixPcent;
     extern int Spread;
     extern int CurrentHSP;
-    char log[128];
     int x,y;
     int found = 0;
     
@@ -426,8 +460,8 @@ int find_best_location ()
     minVal = 99999999.0;
     
     // bug ici, ne prend pas en compte ce qu'on vient de cliquer
-    sprintf (log, "MaxMatrices %d, learned %d", MaxMatrices, CurrentWifi.Releves);
-    control_message(MSG_DEBUG, log, 10);
+    sprintf (LogMsg, "MaxMatrices %d, learned %d", MaxMatrices, CurrentWifi.Releves);
+    control_message(MSG_DEBUG, LogMsg, 10);
     
     for (i=0; i<MaxMatrices; i++)
     {
@@ -439,8 +473,8 @@ int find_best_location ()
             {
                 if (DebugMode == 1)
                 {
-                    sprintf (log,"* Testing zone %x within %.2fpc*", WifiMatrix[i].zone, MatrixPcent);
-                    control_message(MSG_DEBUG, log, 10);
+                    sprintf (LogMsg,"* Testing zone %x within %.2fpc*", WifiMatrix[i].zone, MatrixPcent);
+                    control_message(MSG_DEBUG, LogMsg, 10);
                 }
 
                 // grab the best map_match for each 4 direction
@@ -453,8 +487,8 @@ int find_best_location ()
                             normX, normY, WifiMatrix[i].zone);
                     if (DebugMode == 1)
                     {
-                        sprintf (log,"--- found %d,%d", minx[orientation], miny[orientation]);
-                        control_message(MSG_DEBUG, log, 10);
+                        sprintf (LogMsg,"--- found %d,%d", minx[orientation], miny[orientation]);
+                        control_message(MSG_DEBUG, LogMsg, 10);
                     }
 
                 }
@@ -486,16 +520,16 @@ int find_best_location ()
                 {
                     if (DebugMode == 1)
                     {
-                        sprintf (log,"HSP %d recognized in zone %x",CurrentHSP,WifiMatrix[i].zone);
-                        control_message(MSG_DEBUG, log, 10);
+                        sprintf (LogMsg,"HSP %d recognized in zone %x",CurrentHSP,WifiMatrix[i].zone);
+                        control_message(MSG_DEBUG, LogMsg, 10);
                     }
                     allVal *= 0.8;
                 }
                       
                 if (DebugMode == 1)
                 {
-                    sprintf (log,"* Results : Val %.2f, avgX : %d, avgY : %d",allVal,avgX, avgY);
-                    control_message(MSG_DEBUG, log, 10);
+                    sprintf (LogMsg,"* Results : Val %.2f, avgX : %d, avgY : %d",allVal,avgX, avgY);
+                    control_message(MSG_DEBUG, LogMsg, 10);
                 }
 
                 // compute distance between 4 points :
@@ -510,8 +544,8 @@ int find_best_location ()
                 {
                     for (orientation = 0; orientation < 4; orientation++)
                     {
-                        sprintf (log,"* dist[%d] : %.2f",orientation,dist[orientation] );
-                        control_message(MSG_DEBUG, log, 10);
+                        sprintf (LogMsg,"* dist[%d] : %.2f",orientation,dist[orientation] );
+                        control_message(MSG_DEBUG, LogMsg, 10);
                     }
                 }
                 
@@ -533,8 +567,8 @@ int find_best_location ()
     
     if (DebugMode == 1)
     {
-        sprintf (log,"Located at %d,%d - correlation %.3f \n",FinalX,FinalY, minVal);
-        control_message(MSG_DEBUG, log, 10);
+        sprintf (LogMsg,"Located at %d,%d - correlation %.3f \n",FinalX,FinalY, minVal);
+        control_message(MSG_DEBUG, LogMsg, 10);
     }
     // dessiner les 4 ? mettre un point sur le robot ?
 //   draw_matched_scan (normX, normY, 180, minx, miny);

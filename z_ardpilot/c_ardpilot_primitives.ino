@@ -6,6 +6,10 @@
 //
 //////////////////////////////////////////
 
+// à mettre dans les parametres
+#define MAXSTEPS 10 
+
+
 void log_obstacle (char cote, int val)
 {
       obuffer[0] = C_LOG;
@@ -33,7 +37,7 @@ long cap, delta;
 static long previousDelta = 999;
 
   // determine which way to turn
-  cap = (long) get_compas (NULL, 0);
+  cap = (long) fast_get_compas ();
   delta = (long) dif_angle (PrimValue, cap);
   if (previousDelta == 999) {
     previousDelta = delta;
@@ -64,22 +68,22 @@ static long previousDelta = 999;
           ServoLeft.writeMicroseconds (1500);
           ServoRight.writeMicroseconds (1500);
 
-          // return true if we have reached the requested angle ; flase if stopped by an obstacle
-          obuffer[0] = C_COLOR;
-          obuffer[1] = SequencePrimitive;
-          obuffer[2] = Primitive;
-                    
-          if (dl >= DistanceMin)
-            obuffer[3] = 'T';  
-          else
-            obuffer[3] = 'F';
-            
-          strcpy (&(obuffer[4]), ButtonID);
-  
-          wifi_write ();
-          
           Primitive = P_NULL;
           previousDelta = 999;
+          
+          // return true if we have reached the requested angle ; flase if stopped by an obstacle
+          obuffer[0] = C_COLOR;
+          obuffer[1] = Primitive;
+                    
+          if (dl >= DistanceMin)
+            obuffer[2] = 'T';  
+          else
+            obuffer[2] = 'F';
+
+          strcpy (&(obuffer[3]), ButtonID);
+  
+          wifi_write ();
+         
         }
 
  }
@@ -108,12 +112,18 @@ void primitive_avant (long dl)
 {
   int cap;
   int delta = AjustementMoteur; 
+  static int step = 0; 
+  int Valeur;
   
+  
+  if (step < MAXSTEPS) // permet de controler une accélération
+    step++;
+    
   // attention penser à ajuster le seuil d'obstacle, et la correction d'angle, en fonction de la vitesse        
 
   if (CapASuivre >= 0) 
   {
-    cap = get_compas (NULL, 0);
+    cap = fast_get_compas ();
     delta += (int) round (dif_angle (CapASuivre, cap) * FacteurAlignement); // ajoute le delta d'angle à la correction. Si instable proposer un facteur multiplicatif dans fichier config
 
 // debug pour le moment
@@ -126,26 +136,26 @@ void primitive_avant (long dl)
   
     if ((dl >= DistanceMin) && (PrimValue !=0) && (millis() < Decompte))
     { // objective still to reach : continue
-        ServoLeft.writeMicroseconds (1500 + PrimValue + delta);
-        ServoRight.writeMicroseconds (1500 - PrimValue + delta);
+        Valeur = (PrimValue * step) / MAXSTEPS;
+        ServoLeft.writeMicroseconds (1500 + Valeur + delta);
+        ServoRight.writeMicroseconds (1500 - Valeur + delta);
     } else { // we have etected an obstacle ==> stop engines 
 
       ServoLeft.writeMicroseconds(1500);
       ServoRight.writeMicroseconds(1500);
     
       obuffer[0] = C_PRI;
-      obuffer[1] = SequencePrimitive;
-      obuffer[2] = Primitive;
+      obuffer[1] = Primitive;
       if (dl < DistanceMin) {
-        obuffer[3] = 'F';
+        obuffer[2] = 'F';
       } else {
-        obuffer[3] = 'T';
+        obuffer[2] = 'T';
       }
-      obuffer[4] = '\0';
+      obuffer[3] = '\0';
       wifi_write ();
           
       Primitive = P_NULL;
-
+      step = 0;
     }
 }
 
@@ -216,10 +226,9 @@ wifi_write ();
       ServoRight.writeMicroseconds(1500);
     
       obuffer[0] = C_PRI;
-      obuffer[1] = SequencePrimitive;
-      obuffer[2] = Primitive;
-      obuffer[3] = 'T';
-      obuffer[4] = '\0';
+      obuffer[1] = Primitive;
+      obuffer[2] = 'T';
+      obuffer[3] = '\0';
       wifi_write ();
           
       Primitive = P_NULL;

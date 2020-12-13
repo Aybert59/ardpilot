@@ -13,7 +13,9 @@
         
         <script src="http://code.jquery.com/jquery-2.2.4.min.js"></script>
         <script src="http://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+        
         <script src="/socket.io/socket.io.js"></script>
+
         <script src='nouislider.js'></script>
         <script src="wNumb.js"></script>
         <script src="js_display.js"></script>
@@ -25,13 +27,22 @@
 
         <script type="text/javascript" src="util-functions.js"></script>
         <script type="text/javascript" src="clear-default-text.js"></script>
-        
+        <style>
+            .dot {
+              height: 12px;
+              width: 12px;
+              background-color: red;
+              border-radius: 50%;
+              display: inline-block;
+            }
+        </style>
         <script>
             var VoltMeter;
             var MemMeter;
             var color;
 
-                
+
+            
             $( window ).load(function() {
                                  
                 // build the voltage stuff
@@ -272,8 +283,8 @@
                 // build the socket stuff
                 // note : in Javascript a variable not declared has a global scope
                                 
-                socket = io.connect('http://192.168.1.3:8080');
-                                
+                //socket = io.connect('http://192.168.1.3:8080',{'forceNew':true });
+                var socket = io.connect('http://192.168.1.3:8080');
                 socket.on('log', function(data) {
                         var importance = data.importance;
                         var message = data.texte;
@@ -356,6 +367,16 @@
                         point = series.points[0];
                         point.update(parseFloat(dataset[4]));
                         series.show ();
+                        
+                        var cal = parseInt(dataset[5]);
+                        if (cal == 0)
+                            document.getElementById('CalCircle').style.background='red';
+                        else if (cal == 1)
+                            document.getElementById('CalCircle').style.background='LightCoral';
+                        else if (cal == 2)
+                            document.getElementById('CalCircle').style.background='yellow';
+                        else if (cal == 3)
+                            document.getElementById('CalCircle').style.background='LightGreen';
                         })
                                 
                 socket.on('LogFileOK', function(message) {
@@ -410,6 +431,8 @@
                           
                       if (message.charAt(0) == 'T') {
                         color='LightGreen';
+                      } else if (message.charAt(0) == 'O') {
+                          color='SandyBrown';
                       } else {
                         color='LightCoral';
                       }
@@ -629,7 +652,7 @@
                                      marker: {
                                      enabled: true,
                                      symbol: 'circle',
-                                     radius: 1
+                                     radius: 2
                                      }
                                      
                             }],
@@ -967,7 +990,7 @@
                     <textarea readonly id="TextBox" cols="80" rows="18" style="border-width:1px; border-style:groove; background-color:#F8E0E0">
                      </textarea></center>
                 </td>
-                <td rowspan="4"> <center> <div id="ArdCompass"
+                <td colspan="2" rowspan="3"> <center> <div id="ArdCompass"
                     onClick="do_cmd('CMP')" title="Click to update" style="width: 200px; height: 200px; margin: 0 auto"></div> </center> </td>
                 <td> <center> <input type="button" value="Front Dist" id="DistG"
                     onClick="do_cmd('DST')" title="Measure distance from turret Lidar"/> </center> </td>
@@ -987,6 +1010,8 @@
                 <td colspan=2> <center> <div id="ArdMemMeter" style="width: 200px; height: 130px; margin: 0 auto"> </div> </td>
             </tr>
             <tr>
+            <td> <div style="text-align: right">Calibration status  </div> </td>
+            <td> <span class="dot" id="CalCircle"></span></td>
             <td> <div style="text-align: right">Temp </div> </td>
             <td> <center> <div id="Temperature" style="width: 80px; height: 25px; margin: 0 auto"> </div> </td>
             </tr>

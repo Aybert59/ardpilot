@@ -139,6 +139,7 @@ void send_bin_status ()
   len += bin_get_compas (&(obuffer[len]));
   len += bin_get_memory (&(obuffer[len]));
   len += bin_get_battery (&(obuffer[len]));
+  len += bin_get_calibration_state (&(obuffer[len]));
 
   wifi_write_binary (len);
 }
@@ -184,6 +185,7 @@ void setup() {
   ecran.print (ssid[CurrentAP]);
   ecran.print (" ");
 
+//  while (! wifi_begin (ssid[CurrentAP].c_str(), pass[CurrentAP].c_str()));
   wifi_begin (ssid[CurrentAP].c_str(), pass[CurrentAP].c_str());
   
   ecran.print ("ok\n");
@@ -268,7 +270,7 @@ void loop() {
     //////revoir tout ce qui suit
     if (Primitive != P_NULL)
     {
-      dl = measure_distance (1);
+      dl = measure_distance_stable ();
 
       
       switch (Primitive) {

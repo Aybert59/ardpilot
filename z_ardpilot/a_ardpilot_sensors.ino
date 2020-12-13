@@ -168,20 +168,42 @@ int measure_distance_lidar_i2c () {
 
 long measure_distance (int n) {
   long li,us, d;
+  long dr = 0;
+  int i;
   
-  li = (long) measure_distance_lidar_i2c ();
-  us = measure_distance_us (n);
+  for (i=0; i<n; i++)
+  {
+    li = (long) measure_distance_lidar_i2c ();
+    us = measure_distance_us (n);
 
-  // à affiner
+    // à affiner
 
-  if (li > 40)
-    d = li - 10.0;
-  else 
-    d = (us / 58.0) - 2 ; // 58 pour vitesse du son ; 2 cm longueur de l'autre capeur qui dépasse
-     
-  return d;
+    if (li > 40)
+      dr += li - 10.0;
+    else 
+      dr += (us / 58.0) - 2 ; // 58 pour vitesse du son ; 2 cm longueur de l'autre capeur qui dépasse
+  }
   
+  return (dr/i);
 }
+
+long measure_distance_stable () {
+  long d1, d2;
+  float error = 1, delta;
+  
+  d1 = measure_distance (1);
+  while (error > 0.05)
+  {
+    d2 = measure_distance (1);
+    delta = (d2 - d1) * 1.0;
+    error = abs (delta) / d2;
+
+    d1 = d2;
+  }
+     
+  return d2;
+}
+
 
 void get_distance (byte side) {
  // long d;
@@ -458,6 +480,72 @@ void get_angle()
     get_compas (obuffer, 64); 
   
     wifi_write();
+}
+
+int fast_get_compas () {
+  int8_t head_high=0, head_low=0;
+  int16_t angle16=0;
+  int i;
+  
+
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(2);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  // Request 4 bytes from the CMPS12
+  // this will give us both bytes of the 16 bit bearing, pitch and roll
+  Wire.requestFrom(CMPS12_ADDRESS, 2);       
+  while(Wire.available() < 2);        // Wait for all bytes to come back
+  
+  head_high = Wire.read();
+  head_low = Wire.read();
+   
+  angle16 = head_high;                 // Calculate 16 bit angle
+  angle16 <<= 8;
+  angle16 += head_low;
+
+  return (angle16/10);
+}
+
+unsigned int cmps_get_calibration_state () {
+  int8_t CalState=0;
+  
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(0x1E);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  // Request 1 bytes from the CMPS12
+  Wire.requestFrom(CMPS12_ADDRESS, 1);       
+  while(Wire.available() < 1);        // Wait for all bytes to come back
+  
+  CalState = Wire.read();
+  
+  return (CalState);
+}
+
+int bin_get_calibration_state (char outstr[])  // outstr supposed to have 6 Bytes available
+{     
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(0x1E);                     //Sends the register we wish to start reading from
+  Wire.endTransmission();
+ 
+  Wire.requestFrom(CMPS12_ADDRESS, 1);       
+  while(Wire.available() < 1);        // Wait for all bytes to come back
+ 
+  outstr[0] = Wire.read(); 
+   
+  return (1); // number of bytes added
+}
+
+void reset_calibration ()
+{     
+  Wire.beginTransmission(CMPS12_ADDRESS);  //starts communication with CMPS12
+  Wire.write(0xE0);                    
+  delay(20); // Wait 20ms for transmit
+  Wire.write(0xE5); 
+  delay(20); // Wait 20ms for transmit
+  Wire.write(0xE2); 
+  Wire.endTransmission(); // stop transmitting
 }
 
 int get_lidar_val_i2c (byte *s)

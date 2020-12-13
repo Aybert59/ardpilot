@@ -15,6 +15,9 @@ void close_and_shutdown() {
   // close socket and disconnect WIFI
   wifi_close ();
 
+  // forget cmps12 calibration
+  reset_calibration ();
+
   // show ready
   digitalWrite (LED, HIGH);
   delay (1000);
@@ -82,7 +85,7 @@ void manage_command (byte len) {
     
   case C_LED:
   
-    if (sequence == 1)
+    if (ibuffer[1] == 1)
       digitalWrite (LED, LOW);
     else
       digitalWrite (LED, HIGH);
@@ -201,7 +204,7 @@ void manage_command (byte len) {
   case C_PRI:
 
     res = true;
-    newPrimitive = (unsigned char) ibuffer[2]; // get the primitive
+    newPrimitive = (unsigned char) ibuffer[1]; // get the primitive
  
  // debug
  // obuffer[0] = C_LOG;
@@ -244,8 +247,10 @@ void manage_command (byte len) {
 
         // initialisation de la primitive;
  
-        PrimValue = atoi(&(ibuffer[3])); // consigne d'angle
-        cap = get_compas (NULL, 0); // angle actuel
+        PrimValue = atoi(&(ibuffer[2])); // consigne d'angle
+        ecran.print ("turning to ");
+        ecran.println (PrimValue);
+        cap = fast_get_compas (); // angle actuel
 
         // determine which way to turn - global var so no need to calculate each time
         b1 = dif_angle (PrimValue, cap);
@@ -255,7 +260,7 @@ void manage_command (byte len) {
           servo2.write (0);
         else
           servo2.write (180);
-        delay (200); // wait a bit for the servo to be in position, otherwise distance measure can be false. Is 200 enough ?
+        delay (500); // wait a bit for the servo to be in position, otherwise distance measure can be false. Is 200 enough ?
       break;
       
       case P_TEST_LEFT :
@@ -266,11 +271,11 @@ void manage_command (byte len) {
       case P_SUIVI_G :
      
         if (Primitive == P_AVANT_CAP)
-          CapASuivre = get_compas (NULL, 0);
+          CapASuivre = fast_get_compas ();
         else
           CapASuivre = -1;
                    
-        PrimValue = atoi(&(ibuffer[3])); // consigne de vitesse
+        PrimValue = atoi(&(ibuffer[2])); // consigne de vitesse
         for (i=4; i<64; i++)
         {
           if ((ibuffer[i] == '\0') || (ibuffer[i] == ' '))

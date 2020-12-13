@@ -109,7 +109,7 @@ int wifi_start () {
   ecran.println("Start WIFI");
   
   Serial.begin (115200);
-  Serial.setTimeout (2000);
+  Serial.setTimeout (5000);
   
   digitalWrite (WIFI_ON, HIGH); // enable power
   delay (500);

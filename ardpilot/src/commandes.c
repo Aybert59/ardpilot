@@ -15,7 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/poll.h>
-
+#include <math.h>
 #include "ardpilot_grammar.h"
 #include "ardpilot.h"
 
@@ -105,6 +105,7 @@ int boucle_attente (unsigned char parametre, int attente, int retries)
         else if (ret == 0)
         {
             printf("No data within timeout period, remaining %d tries\n", count);
+            timeout.tv_usec = attente * 1000;
             if (count == 0)
             {
                 // number of retries has expired
@@ -212,25 +213,40 @@ int bloc_get_scan (char dir, double DestPointsX[], double DestPointsY[], double 
 
 char bloc_primitive_avant (int vitesse, int distance) // distance en mm
 {
-    unsigned char sequence;
     char buffer[64];
-    int i;
+    int i, x, m;
     unsigned int duree;
+    float facteur;
+    extern float carto_vitesse[];
     
     // necessité de calibrer distance parcourue en fonction de la vitesse et de la durée
     
-    sequence = Sequence[C_PRI] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-        sequence++;
-    
-    //duree = distance_to_millis (vitesse,distance);
-duree = distance;
-
     buffer[0] = C_PRI;
-    buffer[1] = sequence;
-    buffer[2] = P_AVANT;
-    sprintf (&(buffer[3]), "%d %u",vitesse,duree);
+    buffer[1] = P_AVANT_CAP;
     
+    if (vitesse < -120)
+        vitesse = -120;
+    if (vitesse > 120)
+        vitesse = 120;
+    
+    if (distance < 0)
+        distance = 0;
+    if (distance > 200)
+        distance = 200;
+
+    x = (int) floor (vitesse / 5.0);
+    m = vitesse % 5;
+    if (m == 0)
+        facteur = carto_vitesse[x];
+    else
+    {
+        facteur = (carto_vitesse[x+1] - carto_vitesse[x]);
+        facteur = ((facteur / 5) * m) + carto_vitesse[x];
+    }
+    duree = (int) round((distance / facteur) * 10000);
+    
+    sprintf (&buffer[2], "%d %u", vitesse, duree);
+        
     write_ard (ardfd, buffer);
     boucle_attente (C_PRI, 0, 0);
     
@@ -246,39 +262,32 @@ duree = distance;
 
 char bloc_primitive_spot_turn (int cap_demande) // cap corrigé en ° (0 = boulevard, 180 = jardin)
 {
-    unsigned char sequence;
     char buffer[64];
     int cap;
-    int ret = 1, retries = 5;
-    
     extern char PrimitiveResult;
+    int ret;
     
-    sequence = Sequence[C_PRI] + 1;
-    if ((sequence == '*') || (sequence == 0x00))
-        sequence++;
-    
+    control_message(MSG_INFO, "COLOROSturn", 10);
     buffer[0] = C_PRI;
-    buffer[1] = sequence;
-    buffer[2] = P_SPOT_TURN;
+    buffer[1] = P_SPOT_TURN;
     cap = cap_correction[cap_demande];
-    sprintf (&(buffer[3]), "%d",cap);
+    sprintf (&(buffer[2]), " %d",cap);
     
-    PrimitiveResult = 'T';
-    while ((ret == 1) && (retries > 0))
-    {
-        write_ard (ardfd, buffer);
-        ret = boucle_attente (C_COLOR, 5000, 0); // wait 5 seconds
-        
-        retries--;
-    }
-    
+    write_ard (ardfd, buffer);
+    ret = boucle_attente (C_COLOR, 5000, 5); // wait 5 seconds, max 5 times
+
     // afficher les parametres relevés
     
-    if (PrimitiveResult == 'T')
+    if ((PrimitiveResult == 'T') && (ret == 0))
+    {
+        control_message(MSG_INFO, "COLORTSturn", 10);
         printf ("Move completed\n");
+    }
     else
+    {
+        control_message(MSG_INFO, "COLORFSturn", 10);
         printf ("Move blocked\n");
-    
+    }
     return PrimitiveResult;
 }
 

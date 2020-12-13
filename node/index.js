@@ -148,7 +148,7 @@ const exec = require('child_process').exec;
 var http = require('http');
 var url = require('url');
 
-var server = http.createServer(function (request, response)
+const server = http.createServer(function (request, response)
 {
   if (request && request.url)
   {
@@ -167,7 +167,18 @@ var net = require('net');
 var HOST = '127.0.0.1';
 var PORT = 8001;
 
+
+const io = require('/usr/bin/node_modules/socket.io')(server, {
+  // ...
+});
+
 var client = new net.Socket();
+
+
+client.connect(PORT, HOST, function() {
+    console.log('CONNECTED TO: ' + HOST + ':' + PORT);
+});
+client.setNoDelay(true);
 
 // Add a 'close' event handler for the client socket
 client.on('close', function() {
@@ -178,90 +189,87 @@ client.on('error', function (e) {
         console.log('Error connecting...');
 });
 
-var io = require('socket.io').listen(server);
+// Add a 'data' event handler for the client socket
+// data is what the server sent to this socket
+client.on('data', function(data) {
+    //console.log('Message reçu : ' + data);
+    var chaine = data.toString();
+        var n;
+
+    // from server to Web interface
+//    if(io.connected) {
+        if (chaine.indexOf('LOG') == 0) {
+            io.emit('log',{ importance: chaine.charAt(3), texte: chaine.substring(4)});
+        } else if (chaine.indexOf('AXY') == 0) {
+            io.emit('axy',chaine.substring(3));
+        } else if (chaine.indexOf('VOLT') == 0) {
+            io.emit('volt',chaine.substring(4));
+        } else if (chaine.indexOf('MEM') == 0) {
+            io.emit('mem',chaine.substring(3));
+        } else if (chaine.indexOf('TEMP') == 0) {
+            io.emit('temp',chaine.substring(4));
+        } else if (chaine.indexOf('SR1') == 0) {
+            io.emit('sr1',chaine.substring(3));
+        } else if (chaine.indexOf('SR2') == 0) {
+            io.emit('sr2',chaine.substring(3));
+        } else if (chaine.indexOf('STATUS') == 0) {
+            io.emit('status',chaine.substring(6));
+        } else if (chaine.indexOf('LOGF') == 0) {
+            io.emit('LogFileOK',chaine.substring(4));
+        } else if (chaine.indexOf('ENG') == 0) {
+            io.emit('eng',chaine.substring(3));
+        } else if (chaine.indexOf('CLEARV') >= 0) {
+            io.emit('clearv',chaine.substring(n+6));
+        } else if (chaine.indexOf('CLEARH') >= 0) {
+            io.emit('clearh',chaine.substring(n+6));
+        } else if (chaine.indexOf('PLOTH') >= 0) {
+            n = chaine.indexOf('PLOTH');
+            io.emit('ploth',chaine.substring(n+5));
+        } else if (chaine.indexOf('PLOTV') >= 0) {
+            n = chaine.indexOf('PLOTV');
+            io.emit('plotv',chaine.substring(n+5));
+        } else if (chaine.indexOf('DRAWMURS') >= 0) {
+            n = chaine.indexOf('DRAWMURS');
+            io.emit('drawmurs',chaine.substring(n+8));
+        } else if (chaine.indexOf('DRAWMAPSCAN') >= 0) {
+            n = chaine.indexOf('DRAWMAPSCAN');
+            io.emit('drawmapscan',chaine.substring(n+11));
+        } else if (chaine.indexOf('DRAWLOCATION') >= 0) {
+            n = chaine.indexOf('DRAWLOCATION');
+            io.emit('drawlocation',chaine.substring(n+12));
+        } else if (chaine.indexOf('DRAWMAPPATH') >= 0) {
+            n = chaine.indexOf('DRAWMAPPATH');
+            io.emit('drawmappath',chaine.substring(n+11));
+        } else if (chaine.indexOf('CLEARPLAN') >= 0) {
+            io.emit('ClearPlan',chaine.substring(n+8));
+        } else if (chaine.indexOf('DRAWCOLOR') >= 0) {
+            n = chaine.indexOf('DRAWCOLOR');
+            io.emit('drawcolor',chaine.substring(n+9));
+        } else if (chaine.indexOf('DRAWLINE') >= 0) {
+            n = chaine.indexOf('DRAWLINE');
+            io.emit('drawline',chaine.substring(n+8));
+        } else if (chaine.indexOf('COLOR') >= 0) {
+            io.emit('color',chaine.substring(5));
+        } else {
+            io.emit('message','' + data);
+        }
+//    }
+ 
+});
+
 
 // Quand on client se connecte, on le note dans la console
-io.sockets.on('connection', function (socket) {
+io.on('connection', function (socket) {
     var n;
               
     console.log('Un client est connecté !');
-    socket.emit('message',' \n');
-    socket.emit('message','You\'re properly connected to the server\n');
-    socket.emit('message','You can now switch the robot on...\n');
+    console.log(socket.connected);
+    io.emit('message',' \n');
+    io.emit('message','You\'re properly connected to the server');
+    io.emit('message','You can now switch the robot on...\n');
        
-             
-    client.connect(PORT, HOST, function() {
-        console.log('CONNECTED TO: ' + HOST + ':' + PORT);
-    });
-    client.setNoDelay(true);
-              
-    // Add a 'data' event handler for the client socket
-    // data is what the server sent to this socket
-    client.on('data', function(data) {
-              //console.log('Message reçu : ' + data);
-        var chaine = data.toString();
-           
-        // from server to Web interface
-              
-        if (chaine.indexOf('LOG') == 0) {
-              socket.emit('log',{ importance: chaine.charAt(3), texte: chaine.substring(4)});
-        } else if (chaine.indexOf('AXY') == 0) {
-            socket.emit('axy',chaine.substring(3));
-        } else if (chaine.indexOf('VOLT') == 0) {
-              socket.emit('volt',chaine.substring(4));
-        } else if (chaine.indexOf('MEM') == 0) {
-              socket.emit('mem',chaine.substring(3));
-        } else if (chaine.indexOf('TEMP') == 0) {
-              socket.emit('temp',chaine.substring(4));
-        } else if (chaine.indexOf('SR1') == 0) {
-              socket.emit('sr1',chaine.substring(3));
-        } else if (chaine.indexOf('SR2') == 0) {
-              socket.emit('sr2',chaine.substring(3));
-        } else if (chaine.indexOf('STATUS') == 0) {
-            socket.emit('status',chaine.substring(6));
-        } else if (chaine.indexOf('LOGF') == 0) {
-              socket.emit('LogFileOK',chaine.substring(4));
-        } else if (chaine.indexOf('ENG') == 0) {
-              socket.emit('eng',chaine.substring(3));
-        } else if (chaine.indexOf('CLEARV') >= 0) {
-              socket.emit('clearv',chaine.substring(n+6));
-        } else if (chaine.indexOf('CLEARH') >= 0) {
-              socket.emit('clearh',chaine.substring(n+6));
-        } else if (chaine.indexOf('PLOTH') >= 0) {
-                n = chaine.indexOf('PLOTH');
-                socket.emit('ploth',chaine.substring(n+5));
-        } else if (chaine.indexOf('PLOTV') >= 0) {
-              n = chaine.indexOf('PLOTV');
-              socket.emit('plotv',chaine.substring(n+5));
-        } else if (chaine.indexOf('DRAWMURS') >= 0) {
-              n = chaine.indexOf('DRAWMURS');
-              socket.emit('drawmurs',chaine.substring(n+8));
-        } else if (chaine.indexOf('DRAWMAPSCAN') >= 0) {
-              n = chaine.indexOf('DRAWMAPSCAN');
-              socket.emit('drawmapscan',chaine.substring(n+11));
-        } else if (chaine.indexOf('DRAWLOCATION') >= 0) {
-            n = chaine.indexOf('DRAWLOCATION');
-            socket.emit('drawlocation',chaine.substring(n+12));
-        } else if (chaine.indexOf('DRAWMAPPATH') >= 0) {
-              n = chaine.indexOf('DRAWMAPPATH');
-              socket.emit('drawmappath',chaine.substring(n+11));
-        } else if (chaine.indexOf('CLEARPLAN') >= 0) {
-              socket.emit('ClearPlan',chaine.substring(n+8));
-        } else if (chaine.indexOf('DRAWCOLOR') >= 0) {
-              n = chaine.indexOf('DRAWCOLOR');
-              socket.emit('drawcolor',chaine.substring(n+9));
-        } else if (chaine.indexOf('DRAWLINE') >= 0) {
-              n = chaine.indexOf('DRAWLINE');
-              socket.emit('drawline',chaine.substring(n+8));
-        } else if (chaine.indexOf('COLOR') >= 0) {
-              socket.emit('color',chaine.substring(5));
-        } else {
-              socket.emit('message','' + data);
-        }
-    });
-
     // from Web interface to server
-       
+
     socket.on('cmd', function (message) {
       client.write(message + '\0');
     });
@@ -293,10 +301,19 @@ io.sockets.on('connection', function (socket) {
     });
     socket.on('goto', function (message) {
             client.write('GOTO' + message + '\0');
-
     });
 
+    socket.on('disconnect', function (reason) {
+        socket.removeAllListeners();
+        socket.disconnect();
+        console.log('Deconnection du client !');
+        console.log(reason);
+    });
+    socket.on('error', function () {
+        console.log('Erreur du client !');
+    });
 });
+
 
 server.on('error', function (e) {
     if (e.code == 'EADDRINUSE') {

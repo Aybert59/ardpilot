@@ -65,6 +65,7 @@ int CurrentLocY = 180;  // by default locate at the parent's desk
 
 char logFileName[64];
 char Expecting[16];
+char LogMsg[128];
 int (*ExpectFunction)();
 
 
@@ -418,19 +419,19 @@ unsigned char interpret_ard (char *buffer, int debug_mode)
                 
             case C_PRI :
                 if (debug_mode == 1)
-                    printf ("    ARD-->Server PRI %c %c\n", buffer[2], buffer[3]);
+                    printf ("    ARD-->Server PRI %c %c\n", buffer[1], buffer[2]);
                 
-                sprintf (message, "ENG%c%c", buffer[2], buffer[3]);
-                PrimitiveResult = buffer[3];
+                sprintf (message, "ENG%c%c", buffer[1], buffer[2]);
+                PrimitiveResult = buffer[2];
                 control_message(MSG_INFO, message, 10);
                 break;
                 
             case C_COLOR :
                 if (debug_mode == 1)
-                    printf ("    ARD-->Server COLOR %s\n",&(buffer[3]));
+                    printf ("    ARD-->Server COLOR %s\n",&(buffer[2]));
 
-                sprintf (message, "COLOR%s", &(buffer[3]));
-                PrimitiveResult = buffer[3];
+                sprintf (message, "COLOR%s", &(buffer[2]));
+                PrimitiveResult = buffer[2];
                 control_message(MSG_INFO, message, 10);
                 break;
                 
@@ -697,7 +698,6 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
             control_message(MSG_INFO, message, 10);
             
             message[0] = C_PRI;
-            message[1] = sequence;
 
             if ((buffer[3] == 'S') || (buffer[3] == 'L') || (buffer[3] == 'T'))
             {
@@ -706,7 +706,7 @@ unsigned char exec_cmd (char *buffer, int debug_mode)
 printf ("Cap demandé : %d, réel : %d\n",val,n);
 //                sprintf (buffer+4, " %d", n);
                 
-                sprintf (&message[2], "%c %d", buffer[3], n);
+                sprintf (&message[1], "%c %d", buffer[3], n);
             } else
             {
                 sscanf(buffer+4, "%d %d", &val, &dist);
@@ -731,7 +731,7 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
                 }
                 duree = (int) round((dist / facteur) * 10000);
                 
-                sprintf (&message[2], "%c %d %d", buffer[3], val, duree);
+                sprintf (&message[1], "%c %d %d", buffer[3], val, duree);
             }
             write_ard (ardfd, message);
 		}
@@ -770,10 +770,16 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
             switch (PlanClickAction) {
                 case 0 :
                     if (debug_mode == 1)
-                        printf ("Received request to go from %d, %d, to x=%d, y=%d\n", CurrentLocX, CurrentLocY, x, y);
+                    {
+                        sprintf (LogMsg, "Received request to go from %d, %d, to x=%d, y=%d\n", CurrentLocX, CurrentLocY, x, y);
+                        control_message(MSG_DEBUG, LogMsg, 10);
+                    }
                     m = find_path_to (pathx, pathy, 300, CurrentLocX, CurrentLocY, x, y);
                     if (m > 0)
+                    {
                         draw_path (pathx, pathy, m);
+                        n = navigate_to (pathx, pathy, m); // 1 when success
+                    }
                 break;
                 
                 case 1 :  // we get here only if LearnMode was activated, and locating
@@ -785,7 +791,8 @@ printf ("Cap demandé : %d, réel : %d\n",val,n);
         }
         else
         {
-            printf ("Can't interpret command %s of length %d\n", buffer, strlen(buffer));
+            sprintf (LogMsg, "Can't interpret command %s of length %d\n", buffer, strlen(buffer));
+            control_message(MSG_ERROR, LogMsg, 10);
         }
 
     return ACTION_NULL; // not used so far
@@ -1158,11 +1165,6 @@ int pathx[300], pathy[300];
         sleep(1);
         draw_plan();
         init_appt_distances ();
-/*
-DebugMode =1;
-n = find_path_to (pathx, pathy, 300, CurrentLocX, CurrentLocY, 30, 160);
-draw_path (pathx, pathy, n);
- */
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
         ardfd = open_ard_socket (PORT_NUMBER + 1);
