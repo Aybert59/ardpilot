@@ -1,4 +1,56 @@
-"use strict"; //2012-06-23 http://alexandre.alapetite.fr
+"use strict";
+
+var fs = require('fs');
+var os = require('os');
+var path = require('path');
+var util = require('util');
+
+// SYNO only
+if (os.hostname() == 'SYNO2')
+    process.chdir('/volume1/homes/olivier/Raspberry/projets/node')
+
+var net = require('net');
+
+var HOST = '192.168.1.3';
+var PORT = 8001;
+var clientIsConnected = false;
+
+const exec = require('child_process').exec;
+
+var http = require('http');
+var url = require('url');
+
+const server = http.createServer(function (request, response)
+{
+  if (request && request.url)
+  {
+    var requestUrl = url.parse(request.url, true);
+    switch (requestUrl.pathname)
+    {
+      case '/': serveHome(request, response, requestUrl); break;
+      case '/robot': serveRobot(request, response, requestUrl); break;
+      default: serveStaticFile(request, response, requestUrl); break;
+    }
+  }
+  else serve400(request, response);
+});
+
+var io;
+
+if (os.hostname() == 'raspbmc')
+{
+    io = require('/usr/bin/node_modules/socket.io')(server, {
+        // On Raspberry
+    });
+}
+if (os.hostname() == 'SYNO2')
+{
+    io = require('/usr/local/lib/node_modules/socket.io')(server, {
+        // On Syno2
+    });
+}
+
+var client = new net.Socket();
 
 function escapeHtml(text)
 {
@@ -9,12 +61,8 @@ function escapeHtml(text)
     .replace(/'/g, "&#039;");
 }
 
-var fs = require('fs');
-var os = require('os');
-var path = require('path');
-var util = require('util');
 
-var serverSignature = 'Node.js / Debian ' + os.type() + ' ' + os.release() + ' ' + os.arch() + ' / Raspberry Pi';
+var serverSignature = 'Node.js / ' + os.type() + ' ' + os.release() + ' ' + os.arch() + ' / ' + os.hostname();
 
 function done(request, response)
 {
@@ -71,7 +119,10 @@ function serve404(request, response, requestUrl)
 
 function serveStaticFile(request, response, requestUrl)
 {
+
   var myPath = '.' + requestUrl.pathname;
+
+    
   if (myPath && (/^\.\/[a-z0-9_-]+\.[a-z]{2,4}$/i).test(myPath) && (!(/\.\./).test(myPath)))
     fs.stat(myPath, function (err, stats)
     {
@@ -143,50 +194,51 @@ It is now ' + now.toISOString() + '.\n\
   done(request, response);
 }
 
-const exec = require('child_process').exec;
 
-var http = require('http');
-var url = require('url');
 
-const server = http.createServer(function (request, response)
+
+function serveRobot(request, response, requestUrl)
 {
-  if (request && request.url)
-  {
-    var requestUrl = url.parse(request.url);
-    switch (requestUrl.pathname)
-    {
-      case '/': serveHome(request, response, requestUrl); break;
-      default: serveStaticFile(request, response, requestUrl); break;
+    var urlData = requestUrl.query;
+    
+    // http://192.168.1.3:8080/robot?run=LED
+    // ou http://192.168.1.3:8080/robot?run=SR1&par=50
+    
+    response.writeHead(200, {"Content-Type": "text/plain"});
+    if (clientIsConnected == false) {
+        response.write('not connected');
+    } else {
+    
+        if (urlData.run) {
+            if (urlData.par) {
+                client.write(urlData.run + urlData.par + '\0');
+                console.log ('Sending : \"' + urlData.run + urlData.par + '\"');
+            } else {
+                client.write(urlData.run + '\0');
+                console.log ('Sending : \"' + urlData.run + '\"');
+            }
+            //response.write(requestUrl.hostname + ' ' + requestUrl.pathname + ' ' + requestUrl.query.run);
+            response.write('ok');
+        } else {
+            response.write('error');
+        }
+    
     }
-  }
-  else serve400(request, response);
-}); 
-
-var net = require('net');
-
-var HOST = '127.0.0.1';
-var PORT = 8001;
+    response.end();
+}
 
 
-const io = require('/usr/bin/node_modules/socket.io')(server, {
-  // ...
-});
 
-var client = new net.Socket();
-
-
-client.connect(PORT, HOST, function() {
-    console.log('CONNECTED TO: ' + HOST + ':' + PORT);
-});
-client.setNoDelay(true);
 
 // Add a 'close' event handler for the client socket
 client.on('close', function() {
     console.log('Connection closed');
+    clientIsConnected = false;
 });
              
 client.on('error', function (e) {
-        console.log('Error connecting...');
+    console.log('Error connecting...');
+    clientIsConnected = false;
 });
 
 // Add a 'data' event handler for the client socket
@@ -263,26 +315,38 @@ io.on('connection', function (socket) {
     var n;
               
     console.log('Un client est connecté !');
-    console.log(socket.connected);
-    io.emit('message',' \n');
-    io.emit('message','You\'re properly connected to the server');
-    io.emit('message','You can now switch the robot on...\n');
+    
+    if (clientIsConnected == false) {
+        io.emit('message','Not connected to server, trying...');
+        console.log('Not connected to server, trying...');
+        
+        client.connect(PORT, HOST, function() {
+            console.log('CONNECTED TO: ' + HOST + ':' + PORT);
+            clientIsConnected = true;
+            client.setNoDelay(true);
+            io.emit('message',' \n');
+            io.emit('message','You\'re properly connected to the server');
+            io.emit('message','You can now switch the robot on...\n');
+        });
+    }
+    
+    
        
     // from Web interface to server
 
-    socket.on('cmd', function (message) {
-      client.write(message + '\0');
-    });
-
-    socket.on('rstcom', function (message) {
+/*    socket.on('rstcom', function (message) {
       console.log('Reset communication request received');
       console.log('The parent process is pid ' + process.ppid);
       exec('kill -10 '+process.ppid, (err, stdout, stderr) => {
-      if (err) {
+          if (err) {
             console.error(`exec error: ${err}`);
             return;
-      }
-    })
+          }
+      })
+    });
+ */
+    socket.on('command', function (message) {
+        client.write(message + '\0');
     });
     socket.on('LogFile', function (message) {
       client.write('LOGF' + message + '\0');
@@ -327,3 +391,4 @@ server.on('error', function (e) {
              
 server.listen(8080);
 console.log('Node.js server running at %j', server.address());
+console.log(serverSignature);

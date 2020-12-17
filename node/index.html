@@ -282,9 +282,13 @@
                                 
                 // build the socket stuff
                 // note : in Javascript a variable not declared has a global scope
-                                
-                //socket = io.connect('http://192.168.1.3:8080',{'forceNew':true });
-                var socket = io.connect('http://192.168.1.3:8080');
+                
+                // Raspberry
+                //socket = io.connect('http://192.168.1.3:8080');
+                // SYNO
+                var nodeServer = 'http://' + location.host;
+                socket = io.connect(nodeServer);
+                
                 socket.on('log', function(data) {
                         var importance = data.importance;
                         var message = data.texte;
@@ -871,12 +875,12 @@
             }
         
             function do_cmd (commande) {
-                socket.emit('cmd', commande);
+                socket.emit('command', commande);
             }
 
             function do_cmd_color (obj, commande, couleur) {
                 obj.style.background = couleur;
-                socket.emit('cmd', commande);
+                socket.emit('command', commande);
             }
         
             function do_locate (obj, commande, couleur) {
@@ -885,12 +889,12 @@
             }
                                   
             function do_cmd_code (obj, commande, code) {
-                socket.emit('cmd', commande + code);
+                socket.emit('command', commande + code);
             }
         
             function do_cmd_colval (obj, commande, valTxt, couleur) {
                 obj.style.background = couleur;
-                socket.emit('cmd', commande + document.getElementById(valTxt).value);
+                socket.emit('command', commande + document.getElementById(valTxt).value);
             }
         
             function loadit(element)

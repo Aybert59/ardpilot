@@ -972,7 +972,7 @@ int open_cmd_socket (int portno)
     return (fd2);
 }
 
-
+/*
 int open_ard_socket (int portno)
 {
     int fd1, fd2, flags;
@@ -1011,17 +1011,18 @@ int open_ard_socket (int portno)
     }
     control_message(MSG_INFO, "Arduino connection accepted", 0);
     
-/*
- fcntl(fd2, F_SETOWN, getpid());
-    fcntl(fd2, F_SETSIG, SIGIO);
-    flags = fcntl(fd2, F_GETFL);
-    if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
-        exit_on_failure ("fcntl(F_SETFL) error on socket fd");
-*/
+
+ //fcntl(fd2, F_SETOWN, getpid());
+ //   fcntl(fd2, F_SETSIG, SIGIO);
+ //   flags = fcntl(fd2, F_GETFL);
+ //   if (fcntl(fd2, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1)
+ //       exit_on_failure ("fcntl(F_SETFL) error on socket fd");
+
     
     close (fd1);
     return (fd2);
 }
+*/
 
 int write_ard (int fd, char *message)
 {
@@ -1033,7 +1034,7 @@ int write_ard (int fd, char *message)
             printf ("Pipe broken, resetting...\n");
             close (fd);
             ardfd = 0;
-            ardfd = open_ard_socket (PORT_NUMBER + 1);
+            ardfd = open_cmd_socket (PORT_NUMBER + 1);
         }
     }
 }
@@ -1049,7 +1050,7 @@ int main(int argc, char *argv[])
 int pathx[300], pathy[300];
 
     
-    process = vfork();
+/*    process = vfork();
     if (process == 0)             // child
     {
         // Code only executed by child process
@@ -1078,7 +1079,7 @@ int pathx[300], pathy[300];
           
      }
      
-        
+ */
         printf("\nPlease launch web interface once Node is running\n\n");
         
         // parse arguments before forking
@@ -1167,15 +1168,16 @@ int pathx[300], pathy[300];
         init_appt_distances ();
         
         // BUG !! on ne devrait pas dialoguer avec la 1e socket tant que la seconde n'est pas établie
-        ardfd = open_ard_socket (PORT_NUMBER + 1);
-
+        //ardfd = open_ard_socket (PORT_NUMBER + 1);
+        ardfd = open_cmd_socket (PORT_NUMBER + 1);
+        
         control_message(MSG_INFO, "Starting activity ... ", 0);
         control_message(MSG_INFO, "please turn the robot 360° on itself upon startup", 0);
         init_command_mode ();
         strcpy(Expecting, "");
         
         boucle_attente (ACTION_NULL, 0, 0); // will never exit as nobody sends "ACTION_NULL"
-    }
+//    }
     // Code executed by both parent and child.
     
     return 0;
